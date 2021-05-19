@@ -64,8 +64,6 @@ describe('RifScheduler', function (this: {
     const gasResult = await this.schedulerSDK
       .estimateGas(ERC677Data.abi, this.contracts.tokenAddress, 'balanceOf', [consumerAddress])
 
-    console.log('gasResult', gasResult)
-
     expect(gasResult).toBeDefined()
     expect(gasResult?.gte(BigNumber.from(0))).toBe(true)
   })

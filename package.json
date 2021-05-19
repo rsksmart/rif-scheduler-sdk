@@ -9,6 +9,7 @@
   "scripts": {
     "test": "npx jest",
     "test:coverage": "npx jest --coverage",
+    "test:ci": "npx jest src/*/* --coverage --ci",
     "lint": "npx eslint . src/ test/ --ext .js,.ts",
     "lint:fix": "npx eslint . src/ test/ --ext .js,.ts --fix",
     "build": "npx webpack",

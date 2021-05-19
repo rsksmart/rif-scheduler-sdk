@@ -2,3 +2,6 @@ node_modules
 coverage
 dist
 typechain
+.env
+.env.prod
+.DS_Store

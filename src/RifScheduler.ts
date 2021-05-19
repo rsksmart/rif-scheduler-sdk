@@ -1,16 +1,19 @@
 import { Provider } from '@ethersproject/providers'
 import { OneShotSchedule } from '../typechain/OneShotSchedule'
 import OneShotSchedulerBuild from './contracts/OneShotSchedule.json'
-import IERC677 from './contracts/IERC677.json'
-import { BigNumber, Contract, ContractTransaction, Signer } from 'ethers'
+import { BigNumber, ContractTransaction, Signer } from 'ethers'
 import { Plan } from './types'
-import { ERC20, ERC20__factory, ERC677, ERC677__factory } from '../typechain'
+import { ERC20__factory, ERC677__factory } from '../typechain'
 
+type Options = {
+  supportedER677Tokens: string[]
+}
 export default class RifScheduler {
   schedulerContract!: OneShotSchedule
   ethers: any
   provider!: Provider
   signer?: Signer
+  options?: Options
   /**
    * Creates an instance of the RifScheduler SDK.
    *
@@ -22,10 +25,11 @@ export default class RifScheduler {
   static async create (
     ethers: any,
     contractAddress: string,
-    providerOrSigner?: Provider | Signer
+    providerOrSigner?: Provider | Signer,
+    options?: Options
   ): Promise<RifScheduler> {
     const rifSchedulerSdk = new RifScheduler()
-    await rifSchedulerSdk.init(ethers, contractAddress, providerOrSigner)
+    await rifSchedulerSdk.init(ethers, contractAddress, providerOrSigner, options)
     return rifSchedulerSdk
   }
 
@@ -42,7 +46,8 @@ export default class RifScheduler {
   private async init (
     ethers: any,
     contractAddress: string,
-    providerOrSigner?: Provider | Signer
+    providerOrSigner?: Provider | Signer,
+    options?: Options
   ): Promise<void> {
     const currentProviderOrSigner = providerOrSigner || (ethers.getDefaultProvider() as Provider)
     if (Signer.isSigner(currentProviderOrSigner)) {
@@ -61,6 +66,7 @@ export default class RifScheduler {
     }
     this.ethers = ethers
     this.schedulerContract = new this.ethers.Contract(contractAddress, OneShotSchedulerBuild.abi, currentProviderOrSigner)
+    this.options = options
   }
 
   async getPlan (index:number):Promise<Plan> {
@@ -91,30 +97,27 @@ export default class RifScheduler {
     return await token.transferAndCall(this.schedulerContract.address, valueToTransfer, encodedData)
   }
 
-  async _supportsTransferAndCall (tokenAddress:string) : Promise<boolean> {
-    // const signature = this.ethers.utils.keccak256('transferAndCall(address,uint256,bytes)').slice(2, 10)
-    // const bytecode = await this.provider.getCode(tokenAddress)
-    //return Promise.resolve(bytecode.includes(signature))
-    return Promise.resolve(true)
+  _supportsTransferAndCall (tokenAddress:string) : boolean {
+    return this.options?.supportedER677Tokens.includes(tokenAddress) || false
   }
 
   async purchasePlan (planId: number, quantity:number): Promise<ContractTransaction> {
-    if (this.signer === undefined) throw Error('Signer required')
+    if (this.signer === undefined) throw new Error('Signer required')
     const plan = await this.getPlan(planId)
     const purchaseCost = plan.pricePerExecution.mul(quantity)
     const tokenFactory = new ERC20__factory(this.signer)
     const token = tokenFactory.attach(plan.token)
     const signerAddress = await this.signer!.getAddress()
     const balance = await token.balanceOf(signerAddress)
-    console.log(balance.toString(), purchaseCost.toString())
-    if (balance.lt(purchaseCost)) throw Error('Not enough balance')
+
+    if (balance.lt(purchaseCost)) throw new Error('Not enough balance')
     return (this._supportsTransferAndCall(plan.token))
       ? this._erc677Purchase(planId, quantity, plan.token, purchaseCost)
       : this._erc20Purchase(planId, quantity, plan.token, purchaseCost)
   }
 
   async remainingExecutions (planId:number):Promise<number> {
-    if (this.signer === undefined) throw Error('Signer required')
+    if (this.signer === undefined) throw new Error('Signer required')
     const signerAddress = await this.signer?.getAddress()
     const remainingExecutions = await this.schedulerContract.remainingExecutions(signerAddress, planId)
     return remainingExecutions.toNumber()

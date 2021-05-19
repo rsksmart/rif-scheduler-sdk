@@ -3,32 +3,31 @@ import { OneShotSchedule__factory } from '../typechain/factories/OneShotSchedule
 // eslint-disable-next-line camelcase
 import { ERC677__factory } from '../typechain/factories/ERC677__factory'
 import { ethers, Signer, Wallet, BigNumber } from 'ethers'
-import { JsonRpcProvider, WebSocketProvider } from '@ethersproject/providers'
+import { JsonRpcProvider } from '@ethersproject/providers'
 import { Plan } from '../src/types'
+import * as dotenv from 'dotenv'
+dotenv.config()
 
 const Config = {
-// contractAddress: '0x80DA26B793709162721cd8782CBaD9549d1Db9a4',
-//   providerUrl: 'HTTP://127.0.0.1:7545',
-  providerUrl: 'https://public-node.testnet.rsk.co',
-  tokens: { RIF: '0x19f64674D8a5b4e652319F5e239EFd3bc969a1FE', DOC: '0xcb46c0ddc60d18efeb0e586c17af6ea36452dae0' },
-  mnemonic: 'ginger gap live vanish develop monitor pattern cruise nation damage master never'
+  REQUIRED_CONFIRMATIONS: parseInt(process.env.REQUIRED_CONFIRMATIONS as string),
+  BLOCKCHAIN_HTTP_URL: process.env.BLOCKCHAIN_HTTP_URL as string,
+  ONE_SHOOT_SCHEDULER_ADDRESS: process.env.ONE_SHOOT_SCHEDULER_ADDRESS as string,
+  RIF_TOKEN_ADDRESS: process.env.RIF_TOKEN_ADDRESS as string,
+  DOC_TOKEN_ADDRESS: process.env.DOC_TOKEN_ADDRESS as string,
+  MNEMONIC_PHRASE: process.env.MNEMONIC_PHRASE as string
 }
 
 const plans: Plan[] = [
-  { pricePerExecution: BigNumber.from(3), window: BigNumber.from(10000), token: Config.tokens.RIF, active: true },
-  { pricePerExecution: BigNumber.from(4), window: BigNumber.from(300), token: Config.tokens.DOC, active: true }
+  { pricePerExecution: BigNumber.from(3), window: BigNumber.from(10000), token: Config.RIF_TOKEN_ADDRESS, active: true },
+  { pricePerExecution: BigNumber.from(4), window: BigNumber.from(300), token: Config.DOC_TOKEN_ADDRESS, active: true }
 ]
 
 const getJsonRpcProvider = async function (): Promise<JsonRpcProvider> {
-  return await new ethers.providers.JsonRpcProvider(Config.providerUrl)
-}
-
-const getProvider = async function (): Promise<WebSocketProvider> {
-  return await new ethers.providers.WebSocketProvider(Config.providerUrl)
+  return await new ethers.providers.JsonRpcProvider(Config.BLOCKCHAIN_HTTP_URL)
 }
 
 const getWalletSigner = function ():Signer {
-  return Wallet.fromMnemonic(Config.mnemonic)
+  return Wallet.fromMnemonic(Config.MNEMONIC_PHRASE)
 }
 
 interface users {
@@ -65,7 +64,6 @@ const contractsSetUp = async function (): Promise<{schedulerAddress:string, toke
 export {
   Config,
   getJsonRpcProvider,
-  getProvider,
   getUsers,
   getWalletSigner,
   contractsSetUp,

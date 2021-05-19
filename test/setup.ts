@@ -5,13 +5,10 @@ import { ERC677__factory } from '../typechain/factories/ERC677__factory'
 import { ethers, Signer, Wallet, BigNumber } from 'ethers'
 import { JsonRpcProvider } from '@ethersproject/providers'
 import { Plan } from '../src/types'
-import * as dotenv from 'dotenv'
-dotenv.config()
 
 const Config = {
-  REQUIRED_CONFIRMATIONS: parseInt(process.env.REQUIRED_CONFIRMATIONS as string),
-  BLOCKCHAIN_HTTP_URL: process.env.BLOCKCHAIN_HTTP_URL as string,
-  MNEMONIC_PHRASE: process.env.MNEMONIC_PHRASE as string
+  BLOCKCHAIN_HTTP_URL: 'HTTP://127.0.0.1:8545',
+  MNEMONIC_PHRASE: 'ginger gap live vanish develop monitor pattern cruise nation damage master never'
 }
 
 const plans: Plan[] = [

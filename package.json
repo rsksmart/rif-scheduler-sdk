@@ -11,8 +11,8 @@
     "test": "npx jest",
     "test:coverage": "npx jest --coverage",
     "test:ci": "npx jest src/*/* --coverage --ci",
-    "lint": "npx eslint . src/ test/ --ext .js,.ts",
-    "lint:fix": "npx eslint . src/ test/ --ext .js,.ts --fix",
+    "lint": "npx eslint ./src --ext .js,.ts",
+    "lint:fix": "npx eslint ./src --ext .js,.ts --fix",
     "build": "npx webpack",
     "postinstall": "typechain \"src/contracts/*.json\" --target=ethers-v5 --out-dir=src/contracts/types"
   },

@@ -1,10 +1,10 @@
 // eslint-disable-next-line camelcase
-import { OneShotSchedule__factory } from '../typechain/factories/OneShotSchedule__factory'
+import { OneShotSchedule__factory } from '../contracts/types/factories/OneShotSchedule__factory'
 // eslint-disable-next-line camelcase
-import { ERC677__factory } from '../typechain/factories/ERC677__factory'
+import { ERC677__factory } from '../contracts/types/factories/ERC677__factory'
 import { ethers, Signer, BigNumber } from 'ethers'
 import { JsonRpcProvider } from '@ethersproject/providers'
-import { Plan } from '../src/types'
+import { Plan } from '../types'
 
 const Config = {
   BLOCKCHAIN_HTTP_URL: 'HTTP://127.0.0.1:8545'

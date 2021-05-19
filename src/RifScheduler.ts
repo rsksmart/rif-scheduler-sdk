@@ -1,10 +1,10 @@
 import { Provider } from '@ethersproject/providers'
-import { OneShotSchedule } from '../typechain/OneShotSchedule'
+import { OneShotSchedule } from './contracts/types/OneShotSchedule'
 import OneShotSchedulerBuild from './contracts/OneShotSchedule.json'
 import { BigNumber, ContractTransaction, Signer, utils } from 'ethers'
 import { Plan } from './types'
 // eslint-disable-next-line camelcase
-import { ERC20__factory, ERC677__factory } from '../typechain'
+import { ERC20__factory, ERC677__factory } from './contracts/types'
 import { JsonFragment } from '@ethersproject/abi'
 
 type Options = {

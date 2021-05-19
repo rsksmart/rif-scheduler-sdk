@@ -1,8 +1,8 @@
-import Scheduler from '../src'
+import Scheduler from '..'
 import { BigNumber, ethers } from 'ethers'
-import { Plan } from '../src/types'
+import { Plan } from '../types'
 import { getUsers, contractsSetUp, plans } from './setup'
-import ERC677Data from '../src/contracts/ERC677.json'
+import ERC677Data from '../contracts/ERC677.json'
 
 /// this tests give an log message: Duplicate definition of Transfer (Transfer(address,address,uint256,bytes), Transfer(address,address,uint256))
 /// don't worry: https://github.com/ethers-io/ethers.js/issues/905

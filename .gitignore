@@ -1,7 +1,7 @@
 node_modules
 coverage
 dist
-typechain
+src/contracts/types/
 .env
 .env.prod
 .DS_Store

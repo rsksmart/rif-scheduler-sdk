@@ -12,7 +12,7 @@
     "lint": "npx eslint . src/ test/ --ext .js,.ts",
     "lint:fix": "npx eslint . src/ test/ --ext .js,.ts --fix",
     "build": "npx webpack",
-    "generate-types": "typechain --target=ethers-v5 --out-dir=typechain  'src/contracts/*.json'"
+    "postinstall": "typechain \"src/contracts/*.json\" --target=ethers-v5 --out-dir=typechain"
   },
   "repository": {
     "type": "git",

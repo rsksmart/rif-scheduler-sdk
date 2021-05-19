@@ -1,12 +1,12 @@
 import Scheduler from '../src'
-import { ethers, Signer } from 'ethers'
-import { JsonRpcProvider } from '@ethersproject/providers'
+import { BigNumber, ethers } from 'ethers'
 import { Plan } from '../src/types'
-import { OneShotSchedule } from '../typechain/OneShotSchedule'
 import { getUsers, contractsSetUp, plans } from './setup'
 
 /// this tests give an log message: Duplicate definition of Transfer (Transfer(address,address,uint256,bytes), Transfer(address,address,uint256))
 /// don't worry: https://github.com/ethers-io/ethers.js/issues/905
+
+jest.setTimeout(27000)
 
 function equalPlans (p1:Plan, p2:Plan):boolean {
   return (
@@ -18,29 +18,41 @@ function equalPlans (p1:Plan, p2:Plan):boolean {
 }
 
 describe('RifScheduler', function (this: {
-    ethers: any
-    provider: JsonRpcProvider
-    signer: Signer
-    schedulerSDK: OneShotSchedule
-    testCoinAddr: (coinType: number, addr: string) => Promise<void>
+    schedulerSDK: Scheduler,
+    contracts: {
+      schedulerAddress: string;
+      tokenAddress: string;
+    }
   }) {
-  test('should return plan info', async () => {
+  beforeEach(async () => {
     const users = await getUsers()
-    const contracts = await contractsSetUp()
-    plans[0].token = contracts.tokenAddress
+    this.contracts = await contractsSetUp()
 
-    const schedulerSDK = await Scheduler.create(ethers, contracts.schedulerAddress, users.serviceConsumer)
-    const plan = await schedulerSDK.getPlan(0)
+    this.schedulerSDK = await Scheduler.create(ethers, this.contracts.schedulerAddress, users.serviceConsumer)
+  })
 
-    expect(equalPlans(plan, plans[0])).toBe(true)
+  test('should return plan info', async () => {
+    const selectedPlan = { ...plans[0] }
+
+    selectedPlan.token = this.contracts.tokenAddress
+
+    const plan = await this.schedulerSDK.getPlan(0)
+
+    expect(equalPlans(plan, selectedPlan)).toBe(true)
   })
   test('purchase plan ERC20', async () => {
-    const users = await getUsers()
-    const contracts = await contractsSetUp()
-    plans[0].token = contracts.tokenAddress
+    const selectedPlan = { ...plans[0] }
 
-    const schedulerSDK = await Scheduler.create(ethers, contracts.schedulerAddress, users.serviceConsumer)
-    const purchasePlan = await schedulerSDK.purchasePlan(0, 1)
-    console.log(purchasePlan)
+    selectedPlan.token = this.contracts.tokenAddress
+
+    await this.schedulerSDK
+      .approveToken(
+        selectedPlan.token,
+        BigNumber.from(selectedPlan.pricePerExecution)
+      )
+
+    const purchaseResult = await this.schedulerSDK.purchasePlan(0, 1)
+
+    expect(purchaseResult).toBeDefined()
   })
 })

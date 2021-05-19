@@ -70,7 +70,7 @@ export default class RifScheduler {
   }
 
   async getPlan (index:number):Promise<Plan> {
-    const plan = await this.schedulerContract.plans(index)
+    const plan = await this.schedulerContract.plans(BigNumber.from(index))
     return plan as Plan
   }
 
@@ -85,7 +85,11 @@ export default class RifScheduler {
     const tokenFactory = new ERC20__factory(this.signer)
     const token = tokenFactory.attach(tokenAddress)
     const allowance = await token.allowance(signerAddress, this.schedulerContract.address)
-    if (allowance.lt(valueToTransfer)) throw Error('Not enough allowance')
+
+
+    const hasAllowance = allowance.lt(valueToTransfer)
+
+    if (hasAllowance) throw new Error('Not enough allowance')
     return await this.schedulerContract.purchase(planId, quantity)
   }
 

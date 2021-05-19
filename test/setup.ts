@@ -2,13 +2,12 @@
 import { OneShotSchedule__factory } from '../typechain/factories/OneShotSchedule__factory'
 // eslint-disable-next-line camelcase
 import { ERC677__factory } from '../typechain/factories/ERC677__factory'
-import { ethers, Signer, Wallet, BigNumber } from 'ethers'
+import { ethers, Signer, BigNumber } from 'ethers'
 import { JsonRpcProvider } from '@ethersproject/providers'
 import { Plan } from '../src/types'
 
 const Config = {
-  BLOCKCHAIN_HTTP_URL: 'HTTP://127.0.0.1:8545',
-  MNEMONIC_PHRASE: 'ginger gap live vanish develop monitor pattern cruise nation damage master never'
+  BLOCKCHAIN_HTTP_URL: 'HTTP://127.0.0.1:8545'
 }
 
 const plans: Plan[] = [
@@ -18,10 +17,6 @@ const plans: Plan[] = [
 
 const getJsonRpcProvider = async function (): Promise<JsonRpcProvider> {
   return new ethers.providers.JsonRpcProvider(Config.BLOCKCHAIN_HTTP_URL)
-}
-
-const getWalletSigner = function ():Signer {
-  return Wallet.fromMnemonic(Config.MNEMONIC_PHRASE)
 }
 
 interface users {
@@ -46,6 +41,9 @@ const contractsSetUp = async function (): Promise<{schedulerAddress:string, toke
   const oneShotScheduleFactory = new OneShotSchedule__factory(users.admin)
   const erc677Factory = new ERC677__factory(users.admin)
   const erc677 = await erc677Factory.deploy(await users.admin.getAddress(), BigNumber.from(100000), 'RIF', 'RIF')
+
+  await erc677.transfer(await users.serviceConsumer.getAddress(), BigNumber.from(50000))
+
   const oneShotScheduleContract = await oneShotScheduleFactory.deploy()
   await oneShotScheduleContract.initialize(await users.serviceProvider.getAddress(), await users.payee.getAddress())
 
@@ -59,7 +57,6 @@ export {
   Config,
   getJsonRpcProvider,
   getUsers,
-  getWalletSigner,
   contractsSetUp,
   plans
 }

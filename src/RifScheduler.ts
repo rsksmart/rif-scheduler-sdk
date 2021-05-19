@@ -1,9 +1,11 @@
 import { Provider } from '@ethersproject/providers'
 import { OneShotSchedule } from '../typechain/OneShotSchedule'
 import OneShotSchedulerBuild from './contracts/OneShotSchedule.json'
-import { BigNumber, ContractTransaction, Signer } from 'ethers'
+import { BigNumber, ContractTransaction, Signer, utils } from 'ethers'
 import { Plan } from './types'
+// eslint-disable-next-line camelcase
 import { ERC20__factory, ERC677__factory } from '../typechain'
+import { JsonFragment } from '@ethersproject/abi'
 
 type Options = {
   supportedER677Tokens: string[]
@@ -86,7 +88,6 @@ export default class RifScheduler {
     const token = tokenFactory.attach(tokenAddress)
     const allowance = await token.allowance(signerAddress, this.schedulerContract.address)
 
-
     const hasAllowance = allowance.lt(valueToTransfer)
 
     if (hasAllowance) throw new Error('Not enough allowance')
@@ -125,5 +126,28 @@ export default class RifScheduler {
     const signerAddress = await this.signer?.getAddress()
     const remainingExecutions = await this.schedulerContract.remainingExecutions(signerAddress, planId)
     return remainingExecutions.toNumber()
+  }
+
+  async estimateGas (
+    abi: string | readonly (string | utils.Fragment | JsonFragment)[],
+    contractAddress: string,
+    methodName: string,
+    methodParams: string[]
+  ): Promise<BigNumber | undefined> {
+    try {
+      const executeMethod = new utils
+        .Interface(abi)
+        .encodeFunctionData(methodName, methodParams)
+
+      return this.provider
+        .estimateGas({
+          to: contractAddress,
+          data: executeMethod
+        })
+    } catch {
+      // couldn't estimate the gas
+      // it might be an invalid transaction
+      return undefined
+    }
   }
 }

@@ -11,19 +11,16 @@ dotenv.config()
 const Config = {
   REQUIRED_CONFIRMATIONS: parseInt(process.env.REQUIRED_CONFIRMATIONS as string),
   BLOCKCHAIN_HTTP_URL: process.env.BLOCKCHAIN_HTTP_URL as string,
-  ONE_SHOOT_SCHEDULER_ADDRESS: process.env.ONE_SHOOT_SCHEDULER_ADDRESS as string,
-  RIF_TOKEN_ADDRESS: process.env.RIF_TOKEN_ADDRESS as string,
-  DOC_TOKEN_ADDRESS: process.env.DOC_TOKEN_ADDRESS as string,
   MNEMONIC_PHRASE: process.env.MNEMONIC_PHRASE as string
 }
 
 const plans: Plan[] = [
-  { pricePerExecution: BigNumber.from(3), window: BigNumber.from(10000), token: Config.RIF_TOKEN_ADDRESS, active: true },
-  { pricePerExecution: BigNumber.from(4), window: BigNumber.from(300), token: Config.DOC_TOKEN_ADDRESS, active: true }
+  { pricePerExecution: BigNumber.from(3), window: BigNumber.from(10000), token: '', active: true },
+  { pricePerExecution: BigNumber.from(4), window: BigNumber.from(300), token: '', active: true }
 ]
 
 const getJsonRpcProvider = async function (): Promise<JsonRpcProvider> {
-  return await new ethers.providers.JsonRpcProvider(Config.BLOCKCHAIN_HTTP_URL)
+  return new ethers.providers.JsonRpcProvider(Config.BLOCKCHAIN_HTTP_URL)
 }
 
 const getWalletSigner = function ():Signer {

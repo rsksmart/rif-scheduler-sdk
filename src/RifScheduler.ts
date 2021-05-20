@@ -1,8 +1,8 @@
 import { Provider } from '@ethersproject/providers'
 import { OneShotSchedule } from './contracts/types/OneShotSchedule'
 import OneShotSchedulerBuild from './contracts/OneShotSchedule.json'
-import { BigNumber, ContractTransaction, Signer, utils } from 'ethers'
-import { ExecutionState, Plan, Execution } from './types'
+import { BigNumber, BigNumberish, ContractTransaction, Signer, utils } from 'ethers'
+import { ExecutionState, IPlan, IExecution } from './types'
 
 // eslint-disable-next-line camelcase
 import { ERC20__factory, ERC677__factory } from './contracts/types'
@@ -16,6 +16,7 @@ export default class RifScheduler {
   ethers: any
   provider!: Provider
   signer?: Signer
+  signerAddress?: string
   options?: Options
   /**
    * Creates an instance of the RifScheduler SDK.
@@ -42,8 +43,7 @@ export default class RifScheduler {
    * @param ethers - Ethers v5 library
    * @param contractAddress - The address of the OneShotSchedule contract
    * @param providerOrSigner - Ethers provider or signer. If this parameter is not passed, Ethers defaultProvider will be used.
-   * @throws "Signer must be connected to a provider"
-   * @throws "Safe contract is not deployed in the current network"
+   * @param options
    */
 
   private async init (
@@ -59,9 +59,11 @@ export default class RifScheduler {
       }
       this.provider = currentProviderOrSigner.provider
       this.signer = currentProviderOrSigner
+      this.signerAddress = await this.signer.getAddress()
     } else {
       this.provider = currentProviderOrSigner
       this.signer = undefined
+      this.signerAddress = undefined
     }
     const oneSchedulerContract = await this.provider.getCode(contractAddress)
     if (oneSchedulerContract === '0x') {
@@ -72,9 +74,9 @@ export default class RifScheduler {
     this.options = options
   }
 
-  async getPlan (index:number):Promise<Plan> {
+  async getPlan (index:number):Promise<IPlan> {
     const plan = await this.schedulerContract.plans(BigNumber.from(index))
-    return plan as Plan
+    return plan as IPlan
   }
 
   async approveToken (tokenAddress:string, amount: BigNumber): Promise<ContractTransaction> {
@@ -84,18 +86,19 @@ export default class RifScheduler {
   }
 
   private async _erc20Purchase (planId:number, quantity:number, tokenAddress:string, valueToTransfer: BigNumber): Promise<ContractTransaction> {
-    const signerAddress = await this.signer!.getAddress()
+    if (this.signerAddress === undefined) throw new Error('Signer required')
     const tokenFactory = new ERC20__factory(this.signer)
     const token = tokenFactory.attach(tokenAddress)
-    const allowance = await token.allowance(signerAddress, this.schedulerContract.address)
+    const allowance = await token.allowance(this.signerAddress, this.schedulerContract.address)
 
     const hasAllowance = allowance.lt(valueToTransfer)
 
-    if (hasAllowance) throw new Error('Not enough allowance')
+    if (hasAllowance) throw new Error(`The account ${this.signerAddress} has not enough allowance`)
     return await this.schedulerContract.purchase(planId, quantity)
   }
 
   private async _erc677Purchase (planId: number, quantity: number, tokenAddress:string, valueToTransfer: BigNumber): Promise<ContractTransaction> {
+    if (this.signerAddress === undefined) throw new Error('Signer required')
     const encoder = new this.ethers.utils.AbiCoder()
     const encodedData = encoder.encode(['uint256', 'uint256'], [planId.toString(), quantity.toString()])
     const tokenFactory = new ERC677__factory(this.signer)
@@ -153,7 +156,7 @@ export default class RifScheduler {
     }
   }
 
-  executionId (e:Execution):string {
+  executionId (e:IExecution):string {
     const encoder = new this.ethers.utils.AbiCoder()
     const paramTypes = ['address', 'uint256', 'address', 'bytes', 'uint256', 'uint256', 'uint256']
     const paramValues = [e.requestor, e.plan.toString(), e.to, e.data, e.gas.toString(), e.timestamp.toString(), e.value]
@@ -161,28 +164,28 @@ export default class RifScheduler {
     return this.ethers.utils.keccak256(encodedData)
   }
 
-  async schedule (plan: number, executionContractAddress: string, encodedTransactionCall: utils.BytesLike, gas: BigNumber, executionTimeInSeconds: number, value: BigNumber):Promise<string> {
-    if (this.signer === undefined) throw new Error('Signer required')
-
-    await this.schedulerContract.schedule(plan, executionContractAddress, encodedTransactionCall, gas, executionTimeInSeconds, { value })
-
-    const execution:Execution = {
-      requestor: await this.signer.getAddress(),
+  getExecution (plan: BigNumberish, executionContractAddress: string, encodedTransactionCall: utils.BytesLike, gas: BigNumberish, executionTimeInSeconds: BigNumberish, value: BigNumberish, from?:string):IExecution {
+    if (from === undefined && this.signerAddress === undefined) throw new Error('You need to specify the requestorAddress')
+    const execution:IExecution = {
+      requestor: from || this.signerAddress!,
       plan: BigNumber.from(plan),
       data: encodedTransactionCall,
-      gas: gas,
+      gas: BigNumber.from(gas),
       timestamp: BigNumber.from(executionTimeInSeconds),
-      value,
+      value: BigNumber.from(value),
       to: executionContractAddress
     }
-    const scheduleId = this.executionId(execution)
-
-    return scheduleId
+    return execution
   }
 
-  async getCurrentState (id: string): Promise<ExecutionState> {
-    const stateResult = await this.schedulerContract.getState(id)
+  async schedule (execution:IExecution):Promise<ContractTransaction> {
+    if (this.signer === undefined) throw new Error('Signer required')
+    return this.schedulerContract.schedule(execution.plan, execution.to, execution.data, execution.gas, execution.timestamp, { value: execution.value })
+  }
 
-    return stateResult as ExecutionState
+  async getExecutionState (execution: string | IExecution): Promise<ExecutionState> {
+    const id = typeof execution === 'string' ? execution : this.executionId(execution)
+    const stateResult:ExecutionState = await this.schedulerContract.getState(id)
+    return stateResult
   }
 }

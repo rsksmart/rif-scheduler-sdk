@@ -4,16 +4,11 @@ import { OneShotSchedule__factory } from '../contracts/types/factories/OneShotSc
 import { ERC677__factory } from '../contracts/types'
 import { ethers, Signer, BigNumber } from 'ethers'
 import { JsonRpcProvider } from '@ethersproject/providers'
-import { Plan } from '../types'
+import { IPlan } from '../types'
 
 const Config = {
   BLOCKCHAIN_HTTP_URL: 'HTTP://127.0.0.1:8545'
 }
-
-const plans: Plan[] = [
-  { pricePerExecution: BigNumber.from(3), window: BigNumber.from(10000), token: '', active: true },
-  { pricePerExecution: BigNumber.from(4), window: BigNumber.from(300), token: '', active: true }
-]
 
 const getJsonRpcProvider = async function (): Promise<JsonRpcProvider> {
   return new ethers.providers.JsonRpcProvider(Config.BLOCKCHAIN_HTTP_URL)
@@ -52,12 +47,20 @@ const contractsSetUp = async function (): Promise<{schedulerAddress:string, toke
 
   const oneShotScheduleContract = await oneShotScheduleFactory.deploy()
   await oneShotScheduleContract.initialize(await users.serviceProvider.getAddress(), await users.payee.getAddress())
-
-  const oneShotScheduleContractProvider = OneShotSchedule__factory.connect(oneShotScheduleContract.address, users.serviceProvider)
-  await oneShotScheduleContractProvider.addPlan(plans[0].pricePerExecution, plans[0].window, erc20.address)
-  await oneShotScheduleContractProvider.addPlan(plans[1].pricePerExecution, plans[1].window, erc677.address)
   ethers.utils.Logger.setLogLevel(ethers.utils.Logger.levels.WARNING)
   return { schedulerAddress: oneShotScheduleContract.address, tokenAddress: erc20.address, tokenAddress677: erc677.address }
+}
+
+const plansSetup = async function (oneShotScheduleContract:string, tokenAddress:string, tokenAddress677:string):Promise<IPlan[]> {
+  const users = await getUsers()
+  const plans: IPlan[] = [
+    { pricePerExecution: BigNumber.from(3), window: BigNumber.from(10000), token: tokenAddress, active: true },
+    { pricePerExecution: BigNumber.from(4), window: BigNumber.from(300), token: tokenAddress677, active: true }
+  ]
+  const oneShotScheduleContractProvider = OneShotSchedule__factory.connect(oneShotScheduleContract, users.serviceProvider)
+  await oneShotScheduleContractProvider.addPlan(plans[0].pricePerExecution, plans[0].window, tokenAddress)
+  await oneShotScheduleContractProvider.addPlan(plans[1].pricePerExecution, plans[1].window, tokenAddress677)
+  return plans
 }
 
 export {
@@ -65,5 +68,5 @@ export {
   getJsonRpcProvider,
   getUsers,
   contractsSetUp,
-  plans
+  plansSetup
 }

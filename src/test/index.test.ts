@@ -1,7 +1,7 @@
 import Scheduler from '..'
 import { BigNumber, ethers } from 'ethers'
-import { ExecutionState, Plan } from '../types'
-import { getUsers, contractsSetUp, plans } from './setup'
+import { ExecutionState, IPlan } from '../types'
+import { getUsers, contractsSetUp, plansSetup } from './setup'
 import ERC677Data from '../contracts/ERC677.json'
 import dayjs from 'dayjs'
 
@@ -10,7 +10,7 @@ import dayjs from 'dayjs'
 
 jest.setTimeout(27000)
 
-function equalPlans (p1:Plan, p2:Plan):boolean {
+function equalPlans (p1:IPlan, p2:IPlan):boolean {
   return (
     p1.active === p2.active &&
     p1.pricePerExecution.toString() === p2.pricePerExecution.toString() &&
@@ -25,27 +25,23 @@ describe('RifScheduler', function (this: {
       schedulerAddress: string;
       tokenAddress: string;
       tokenAddress677: string;
-    }
+    },
+    plans:IPlan[]
   }) {
   beforeEach(async () => {
     const users = await getUsers()
     this.contracts = await contractsSetUp()
     this.schedulerSDK = await Scheduler.create(ethers, this.contracts.schedulerAddress, users.serviceConsumer,
       { supportedER677Tokens: [this.contracts.tokenAddress677] })
+    this.plans = await plansSetup(this.contracts.schedulerAddress, this.contracts.tokenAddress, this.contracts.tokenAddress677)
   })
-
   test('should return plan info', async () => {
-    const selectedPlan = { ...plans[0] }
-    selectedPlan.token = this.contracts.tokenAddress
     const plan = await this.schedulerSDK.getPlan(0)
-
-    expect(equalPlans(plan, selectedPlan)).toBe(true)
+    expect(equalPlans(plan, this.plans[0])).toBe(true)
   })
+
   test('purchase plan ERC20', async () => {
-    const selectedPlan = { ...plans[0] }
-
-    selectedPlan.token = this.contracts.tokenAddress
-
+    const selectedPlan = this.plans[0]
     await this.schedulerSDK
       .approveToken(
         selectedPlan.token,
@@ -58,7 +54,7 @@ describe('RifScheduler', function (this: {
   })
 
   test('purchase plan ERC667', async () => {
-    const selectedPlan = { ...plans[1] }
+    const selectedPlan = this.plans[1]
     selectedPlan.token = this.contracts.tokenAddress677
     const purchaseResult = await this.schedulerSDK.purchasePlan(1, 1)
 
@@ -96,10 +92,7 @@ describe('RifScheduler', function (this: {
   })
 
   test('should schedule transaction', async () => {
-    // purchase
     const planId = 1
-    const selectedPlan = { ...plans[planId] }
-    selectedPlan.token = this.contracts.tokenAddress677
     await this.schedulerSDK.purchasePlan(planId, 1)
 
     // tx call encoded
@@ -114,8 +107,8 @@ describe('RifScheduler', function (this: {
     const timestamp = dayjs().add(1, 'day').unix()
     const valueToTransfer = BigNumber.from(1)
 
-    const scheduleId =
-     await this.schedulerSDK.schedule(planId, this.contracts.tokenAddress, encodedMethodCall, gas!, timestamp, valueToTransfer)
+    const execution = this.schedulerSDK.getExecution(planId, this.contracts.tokenAddress, encodedMethodCall, gas!, timestamp, valueToTransfer)
+    const scheduleId = await this.schedulerSDK.schedule(execution)
 
     expect(scheduleId).toBeDefined()
   })
@@ -123,8 +116,6 @@ describe('RifScheduler', function (this: {
   test('should get scheduled transaction state', async () => {
     // purchase
     const planId = 1
-    const selectedPlan = { ...plans[planId] }
-    selectedPlan.token = this.contracts.tokenAddress677
     await this.schedulerSDK.purchasePlan(planId, 1)
 
     // tx call encoded
@@ -139,10 +130,10 @@ describe('RifScheduler', function (this: {
     const timestamp = dayjs().add(1, 'day').unix()
     const valueToTransfer = BigNumber.from(1)
 
-    const scheduleId =
-     await this.schedulerSDK.schedule(planId, this.contracts.tokenAddress, encodedMethodCall, gas!, timestamp, valueToTransfer)
+    const execution = this.schedulerSDK.getExecution(planId, this.contracts.tokenAddress, encodedMethodCall, gas!, timestamp, valueToTransfer)
+    const scheduleId = await this.schedulerSDK.schedule(execution)
 
-    const state = await this.schedulerSDK.getCurrentState(scheduleId)
+    const state = await this.schedulerSDK.getExecutionState(execution)
 
     expect(scheduleId).toBeDefined()
     expect(state).toBe(ExecutionState.Scheduled)

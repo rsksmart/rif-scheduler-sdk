@@ -1,12 +1,12 @@
 import { BigNumber, BytesLike } from 'ethers'
-export interface Plan {
+export interface IPlan {
   pricePerExecution: BigNumber;
   window: BigNumber;
   token: string;
   active: boolean;
 }
 
-export interface Execution {
+export interface IExecution {
   requestor: string;
   plan: BigNumber;
   to: string;
@@ -24,4 +24,9 @@ export enum ExecutionState {
   Overdue = 3,
   Refunded = 4,
   Cancelled = 5
+}
+
+export const ErrorMessages = {
+  SIGNER_REQUIRED: ''
+
 }

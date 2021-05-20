@@ -133,7 +133,7 @@ describe('RifScheduler', function (this: {
     const valueToTransfer = BigNumber.from(1)
 
     const execution = this.schedulerSDK.getExecution(planId, this.contracts.tokenAddress, encodedMethodCall, gas!, timestamp, valueToTransfer)
-    const scheduleExecutions = await Promise.all(this.schedulerSDK.scheduleMany(execution,cronExpression,quantity))
+    const scheduleExecutions = await Promise.all(this.schedulerSDK.scheduleMany(execution, cronExpression, quantity))
 
     expect(scheduleExecutions).toBeDefined()
   })

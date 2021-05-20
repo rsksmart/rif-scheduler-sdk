@@ -184,19 +184,19 @@ export default class RifScheduler {
     if (this.signer === undefined) throw new Error('Signer required')
     return this.schedulerContract.schedule(execution.plan, execution.to, execution.data, execution.gas, execution.timestamp, { value: execution.value })
   }
-  
+
   scheduleMany (execution:IExecution, cronExpression:string, quantity:number):Promise<ContractTransaction>[] {
     if (this.signer === undefined) throw new Error('Signer required')
     const scheduledTransactions:Promise<ContractTransaction>[] = []
-    let next:any;
-    for(let i=0;i<quantity;i++){
-      try{
+    let next:any
+    for (let i = 0; i < quantity; i++) {
+      try {
         next = cronParser.parseExpression(cronExpression).next()
-      } catch(e){
-        break;
+      } catch (e) {
+        break
       }
       const nextTimestamp = dayjs(next.toDate()).unix()
-      const nextExecution: IExecution = {...execution,timestamp:BigNumber.from(nextTimestamp)}
+      const nextExecution: IExecution = { ...execution, timestamp: BigNumber.from(nextTimestamp) }
       scheduledTransactions.push(this.schedule(nextExecution))
     }
     return scheduledTransactions

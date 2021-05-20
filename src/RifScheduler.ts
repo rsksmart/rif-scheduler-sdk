@@ -3,6 +3,8 @@ import { OneShotSchedule } from './contracts/types/OneShotSchedule'
 import OneShotSchedulerBuild from './contracts/OneShotSchedule.json'
 import { BigNumber, BigNumberish, ContractTransaction, Signer, utils } from 'ethers'
 import { ExecutionState, IPlan, IExecution } from './types'
+import dayjs from 'dayjs'
+import * as cronParser from 'cron-parser'
 
 // eslint-disable-next-line camelcase
 import { ERC20__factory, ERC677__factory } from './contracts/types'
@@ -181,6 +183,23 @@ export default class RifScheduler {
   async schedule (execution:IExecution):Promise<ContractTransaction> {
     if (this.signer === undefined) throw new Error('Signer required')
     return this.schedulerContract.schedule(execution.plan, execution.to, execution.data, execution.gas, execution.timestamp, { value: execution.value })
+  }
+  
+  scheduleMany (execution:IExecution, cronExpression:string, quantity:number):Promise<ContractTransaction>[] {
+    if (this.signer === undefined) throw new Error('Signer required')
+    const scheduledTransactions:Promise<ContractTransaction>[] = []
+    let next:any;
+    for(let i=0;i<quantity;i++){
+      try{
+        next = cronParser.parseExpression(cronExpression).next()
+      } catch(e){
+        break;
+      }
+      const nextTimestamp = dayjs(next.toDate()).unix()
+      const nextExecution: IExecution = {...execution,timestamp:BigNumber.from(nextTimestamp)}
+      scheduledTransactions.push(this.schedule(nextExecution))
+    }
+    return scheduledTransactions
   }
 
   async getExecutionState (execution: string | IExecution): Promise<ExecutionState> {

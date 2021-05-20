@@ -53,6 +53,7 @@
     "webpack-cli": "^4.7.0"
   },
   "dependencies": {
+    "cron-parser": "^3.5.0",
     "ethers": "^5.1.4"
   }
 }

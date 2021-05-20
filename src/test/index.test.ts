@@ -97,13 +97,12 @@ describe('RifScheduler', function (this: {
     const valueToTransfer = BigNumber.from(1)
 
     const execution = this.schedulerSDK.getExecution(planId, this.contracts.tokenAddress, encodedMethodCall, gas!, timestamp, valueToTransfer)
-    const scheduleId = await this.schedulerSDK.schedule(execution)
+    const scheduledExecution = await this.schedulerSDK.schedule(execution)
 
-    expect(scheduleId).toBeDefined()
+    expect(scheduledExecution).toBeDefined()
   })
 
   test('should get scheduled transaction state', async () => {
-    // purchase
     const planId = 1
     await this.schedulerSDK.purchasePlan(planId, 1)
 

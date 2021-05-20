@@ -95,7 +95,8 @@ export default class RifScheduler {
   }
 
   async _erc677Purchase (planId: number, quantity: number, tokenAddress:string, valueToTransfer: BigNumber): Promise<ContractTransaction> {
-    const encodedData = this.ethers.abiCoder.encode(['uint256', 'uint256'], [planId.toString(), quantity.toString()])
+    const encoder = new this.ethers.utils.AbiCoder()
+    const encodedData = encoder.encode(['uint256', 'uint256'], [planId.toString(), quantity.toString()])
     const tokenFactory = new ERC677__factory(this.signer)
     const token = tokenFactory.attach(tokenAddress)
 
@@ -135,7 +136,7 @@ export default class RifScheduler {
     methodParams: string[]
   ): Promise<BigNumber | undefined> {
     try {
-      const executeMethod = new utils
+      const executeMethod = new this.ethers.utils
         .Interface(abi)
         .encodeFunctionData(methodName, methodParams)
 

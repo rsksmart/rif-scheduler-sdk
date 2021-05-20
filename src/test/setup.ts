@@ -1,7 +1,7 @@
 // eslint-disable-next-line camelcase
 import { OneShotSchedule__factory } from '../contracts/types/factories/OneShotSchedule__factory'
 // eslint-disable-next-line camelcase
-import { ERC677__factory } from '../contracts/types/factories/ERC677__factory'
+import { ERC677__factory } from '../contracts/types'
 import { ethers, Signer, BigNumber } from 'ethers'
 import { JsonRpcProvider } from '@ethersproject/providers'
 import { Plan } from '../types'
@@ -36,21 +36,28 @@ const getUsers = async function ():Promise<users> {
   }
 }
 
-const contractsSetUp = async function (): Promise<{schedulerAddress:string, tokenAddress:string}> {
+const contractsSetUp = async function (): Promise<{schedulerAddress:string, tokenAddress:string, tokenAddress677:string}> {
+  ethers.utils.Logger.setLogLevel(ethers.utils.Logger.levels.ERROR)
   const users = await getUsers()
   const oneShotScheduleFactory = new OneShotSchedule__factory(users.admin)
+
   const erc677Factory = new ERC677__factory(users.admin)
   const erc677 = await erc677Factory.deploy(await users.admin.getAddress(), BigNumber.from(100000), 'RIF', 'RIF')
-
   await erc677.transfer(await users.serviceConsumer.getAddress(), BigNumber.from(50000))
+
+  // using ERC677__factory that supports ERC20 to set totalSupply
+  const erc20Factory = new ERC677__factory(users.admin)
+  const erc20 = await erc20Factory.deploy(await users.admin.getAddress(), BigNumber.from(100000), 'DOC', 'DOC')
+  await erc20.transfer(await users.serviceConsumer.getAddress(), BigNumber.from(50000))
 
   const oneShotScheduleContract = await oneShotScheduleFactory.deploy()
   await oneShotScheduleContract.initialize(await users.serviceProvider.getAddress(), await users.payee.getAddress())
 
   const oneShotScheduleContractProvider = OneShotSchedule__factory.connect(oneShotScheduleContract.address, users.serviceProvider)
-  await oneShotScheduleContractProvider.addPlan(plans[0].pricePerExecution, plans[0].window, erc677.address)
-
-  return { schedulerAddress: oneShotScheduleContract.address, tokenAddress: erc677.address }
+  await oneShotScheduleContractProvider.addPlan(plans[0].pricePerExecution, plans[0].window, erc20.address)
+  await oneShotScheduleContractProvider.addPlan(plans[1].pricePerExecution, plans[1].window, erc677.address)
+  ethers.utils.Logger.setLogLevel(ethers.utils.Logger.levels.WARNING)
+  return { schedulerAddress: oneShotScheduleContract.address, tokenAddress: erc20.address, tokenAddress677: erc677.address }
 }
 
 export {

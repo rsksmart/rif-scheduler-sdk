@@ -4,7 +4,7 @@ import { Plan } from '../types'
 import { getUsers, contractsSetUp, plans } from './setup'
 import ERC677Data from '../contracts/ERC677.json'
 
-/// this tests give an log message: Duplicate definition of Transfer (Transfer(address,address,uint256,bytes), Transfer(address,address,uint256))
+/// this tests give a log message: Duplicate definition of Transfer (Transfer(address,address,uint256,bytes), Transfer(address,address,uint256))
 /// don't worry: https://github.com/ethers-io/ethers.js/issues/905
 
 jest.setTimeout(27000)
@@ -23,20 +23,20 @@ describe('RifScheduler', function (this: {
     contracts: {
       schedulerAddress: string;
       tokenAddress: string;
+      tokenAddress677: string;
     }
   }) {
   beforeEach(async () => {
     const users = await getUsers()
     this.contracts = await contractsSetUp()
 
-    this.schedulerSDK = await Scheduler.create(ethers, this.contracts.schedulerAddress, users.serviceConsumer)
+    this.schedulerSDK = await Scheduler.create(ethers, this.contracts.schedulerAddress, users.serviceConsumer,
+      { supportedER677Tokens: [this.contracts.tokenAddress677] })
   })
 
   test('should return plan info', async () => {
     const selectedPlan = { ...plans[0] }
-
     selectedPlan.token = this.contracts.tokenAddress
-
     const plan = await this.schedulerSDK.getPlan(0)
 
     expect(equalPlans(plan, selectedPlan)).toBe(true)
@@ -53,6 +53,14 @@ describe('RifScheduler', function (this: {
       )
 
     const purchaseResult = await this.schedulerSDK.purchasePlan(0, 1)
+
+    expect(purchaseResult).toBeDefined()
+  })
+
+  test('purchase plan ERC667', async () => {
+    const selectedPlan = { ...plans[1] }
+    selectedPlan.token = this.contracts.tokenAddress677
+    const purchaseResult = await this.schedulerSDK.purchasePlan(1, 1)
 
     expect(purchaseResult).toBeDefined()
   })

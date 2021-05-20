@@ -82,7 +82,7 @@ export default class RifScheduler {
     return await token.approve(this.schedulerContract.address, amount)
   }
 
-  async _erc20Purchase (planId:number, quantity:number, tokenAddress:string, valueToTransfer: BigNumber): Promise<ContractTransaction> {
+  private async _erc20Purchase (planId:number, quantity:number, tokenAddress:string, valueToTransfer: BigNumber): Promise<ContractTransaction> {
     const signerAddress = await this.signer!.getAddress()
     const tokenFactory = new ERC20__factory(this.signer)
     const token = tokenFactory.attach(tokenAddress)
@@ -94,7 +94,7 @@ export default class RifScheduler {
     return await this.schedulerContract.purchase(planId, quantity)
   }
 
-  async _erc677Purchase (planId: number, quantity: number, tokenAddress:string, valueToTransfer: BigNumber): Promise<ContractTransaction> {
+  private async _erc677Purchase (planId: number, quantity: number, tokenAddress:string, valueToTransfer: BigNumber): Promise<ContractTransaction> {
     const encoder = new this.ethers.utils.AbiCoder()
     const encodedData = encoder.encode(['uint256', 'uint256'], [planId.toString(), quantity.toString()])
     const tokenFactory = new ERC677__factory(this.signer)
@@ -103,7 +103,7 @@ export default class RifScheduler {
     return await token.transferAndCall(this.schedulerContract.address, valueToTransfer, encodedData)
   }
 
-  _supportsTransferAndCall (tokenAddress:string) : boolean {
+  private _supportsTransferAndCall (tokenAddress:string) : boolean {
     return this.options?.supportedER677Tokens.includes(tokenAddress) || false
   }
 
@@ -150,5 +150,9 @@ export default class RifScheduler {
       // it might be an invalid transaction
       return undefined
     }
+  }
+
+  async schedule (plan: number, contractAddress: string, encodedTransactionCall: utils.BytesLike, gas: BigNumber, executionTimeInSeconds: number, value: BigNumber):Promise<ContractTransaction> {
+    return this.schedulerContract.schedule(plan, contractAddress, encodedTransactionCall, gas, executionTimeInSeconds, { value })
   }
 }

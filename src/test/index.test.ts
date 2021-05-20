@@ -95,7 +95,7 @@ describe('RifScheduler', function (this: {
     expect(gasResult).not.toBeDefined()
   })
 
-  test.only('should schedule transaction', async () => {
+  test('should schedule transaction', async () => {
     // purchase
     const planId = 1
     const selectedPlan = { ...plans[planId] }

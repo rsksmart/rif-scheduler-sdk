@@ -156,24 +156,24 @@ export default class RifScheduler {
   executionId (e:Execution):string {
     const encoder = new this.ethers.utils.AbiCoder()
     const paramTypes = ['address', 'uint256', 'address', 'bytes', 'uint256', 'uint256', 'uint256']
-    const paramValues = [e.requestor, e.plan.toString(),e.to, e.data, e.gas.toString(), e.timestamp.toString(), e.value]
-    const encodedData = encoder.encode(paramTypes,paramValues)
+    const paramValues = [e.requestor, e.plan.toString(), e.to, e.data, e.gas.toString(), e.timestamp.toString(), e.value]
+    const encodedData = encoder.encode(paramTypes, paramValues)
     return this.ethers.utils.keccak256(encodedData)
   }
 
   async schedule (plan: number, executionContractAddress: string, encodedTransactionCall: utils.BytesLike, gas: BigNumber, executionTimeInSeconds: number, value: BigNumber):Promise<string> {
     if (this.signer === undefined) throw new Error('Signer required')
 
-    const scheduleResult = await this.schedulerContract.schedule(plan, executionContractAddress, encodedTransactionCall, gas, executionTimeInSeconds, { value })
+    await this.schedulerContract.schedule(plan, executionContractAddress, encodedTransactionCall, gas, executionTimeInSeconds, { value })
 
     const execution:Execution = {
       requestor: await this.signer.getAddress(),
       plan: BigNumber.from(plan),
-      data:encodedTransactionCall,
+      data: encodedTransactionCall,
       gas: gas,
-      timestamp:BigNumber.from(executionTimeInSeconds),
+      timestamp: BigNumber.from(executionTimeInSeconds),
       value,
-      to:executionContractAddress
+      to: executionContractAddress
     }
     const scheduleId = this.executionId(execution)
 
@@ -185,5 +185,4 @@ export default class RifScheduler {
 
     return stateResult as ExecutionState
   }
-
 }

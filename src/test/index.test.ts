@@ -1,7 +1,7 @@
 import Scheduler from '..'
 import { BigNumber, ethers } from 'ethers'
 import { ExecutionState, IPlan } from '../types'
-import { getUsers, contractsSetUp, plansSetup } from './setup'
+import { getUsers, contractsSetUp, plansSetup, encodedCallSamples } from './setup'
 import ERC677Data from '../contracts/ERC677.json'
 import dayjs from 'dayjs'
 
@@ -26,7 +26,9 @@ describe('RifScheduler', function (this: {
       tokenAddress: string;
       tokenAddress677: string;
     },
-    plans:IPlan[]
+    plans:IPlan[],
+    encodedTxSamples: {successful:string, failing:string},
+    consumerAddress: string
   }) {
   beforeEach(async () => {
     const users = await getUsers()
@@ -34,6 +36,8 @@ describe('RifScheduler', function (this: {
     this.schedulerSDK = await Scheduler.create(ethers, this.contracts.schedulerAddress, users.serviceConsumer,
       { supportedER677Tokens: [this.contracts.tokenAddress677] })
     this.plans = await plansSetup(this.contracts.schedulerAddress, this.contracts.tokenAddress, this.contracts.tokenAddress677)
+    this.encodedTxSamples = await encodedCallSamples()
+    this.consumerAddress = await users.serviceConsumer.getAddress()
   })
   test('should return plan info', async () => {
     const plan = await this.schedulerSDK.getPlan(0)
@@ -62,31 +66,23 @@ describe('RifScheduler', function (this: {
   })
 
   test('should be able to estimateGas for a valid tx', async () => {
-    const users = await getUsers()
-    const consumerAddress = await users.serviceConsumer.getAddress()
-
     const gasResult = await this.schedulerSDK
-      .estimateGas(ERC677Data.abi, this.contracts.tokenAddress, 'balanceOf', [consumerAddress])
+      .estimateGas(ERC677Data.abi, this.contracts.tokenAddress, 'balanceOf', [this.consumerAddress])
 
     expect(gasResult).toBeDefined()
     expect(gasResult?.gte(BigNumber.from(0))).toBe(true)
   })
 
   test('should not estimateGas for invalid method', async () => {
-    const users = await getUsers()
-    const consumerAddress = await users.serviceConsumer.getAddress()
-
     const gasResult = await this.schedulerSDK
-      .estimateGas(ERC677Data.abi, this.contracts.tokenAddress, 'method-no-exist', [consumerAddress])
+      .estimateGas(ERC677Data.abi, this.contracts.tokenAddress, 'method-no-exist', [this.consumerAddress])
 
     expect(gasResult).not.toBeDefined()
   })
 
   test('should not estimateGas for invalid parameter', async () => {
-    const consumerAddress = 'not-address'
-
     const gasResult = await this.schedulerSDK
-      .estimateGas(ERC677Data.abi, this.contracts.tokenAddress, 'balanceOf', [consumerAddress])
+      .estimateGas(ERC677Data.abi, this.contracts.tokenAddress, 'balanceOf', ['not-address'])
 
     expect(gasResult).not.toBeDefined()
   })
@@ -95,15 +91,8 @@ describe('RifScheduler', function (this: {
     const planId = 1
     await this.schedulerSDK.purchasePlan(planId, 1)
 
-    // tx call encoded
-    const users = await getUsers()
-    const consumerAddress = await users.serviceConsumer.getAddress()
-    const methodName = 'balanceOf'
-    const methodParams = [consumerAddress]
-    const encodedMethodCall =
-      new ethers.utils.Interface(ERC677Data.abi).encodeFunctionData(methodName, methodParams)
-
-    const gas = await this.schedulerSDK.estimateGas(ERC677Data.abi, this.contracts.tokenAddress, 'balanceOf', [consumerAddress])
+    const encodedMethodCall = this.encodedTxSamples.successful
+    const gas = await this.schedulerSDK.estimateGas(ERC677Data.abi, this.contracts.tokenAddress, 'balanceOf', [this.consumerAddress])
     const timestamp = dayjs().add(1, 'day').unix()
     const valueToTransfer = BigNumber.from(1)
 
@@ -118,15 +107,8 @@ describe('RifScheduler', function (this: {
     const planId = 1
     await this.schedulerSDK.purchasePlan(planId, 1)
 
-    // tx call encoded
-    const users = await getUsers()
-    const consumerAddress = await users.serviceConsumer.getAddress()
-    const methodName = 'balanceOf'
-    const methodParams = [consumerAddress]
-    const encodedMethodCall =
-      new ethers.utils.Interface(ERC677Data.abi).encodeFunctionData(methodName, methodParams)
-
-    const gas = await this.schedulerSDK.estimateGas(ERC677Data.abi, this.contracts.tokenAddress, 'balanceOf', [consumerAddress])
+    const encodedMethodCall = this.encodedTxSamples.successful
+    const gas = await this.schedulerSDK.estimateGas(ERC677Data.abi, this.contracts.tokenAddress, 'balanceOf', [this.consumerAddress])
     const timestamp = dayjs().add(1, 'day').unix()
     const valueToTransfer = BigNumber.from(1)
 

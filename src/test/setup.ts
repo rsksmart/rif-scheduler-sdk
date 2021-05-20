@@ -1,7 +1,6 @@
 // eslint-disable-next-line camelcase
-import { OneShotSchedule__factory } from '../contracts/types/factories/OneShotSchedule__factory'
-// eslint-disable-next-line camelcase
-import { ERC677__factory } from '../contracts/types'
+import { ERC677__factory, OneShotSchedule__factory } from '../contracts/types'
+import ERC677Data from '../contracts/ERC677.json'
 import { ethers, Signer, BigNumber } from 'ethers'
 import { JsonRpcProvider } from '@ethersproject/providers'
 import { IPlan } from '../types'
@@ -41,8 +40,7 @@ const contractsSetUp = async function (): Promise<{schedulerAddress:string, toke
   await erc677.transfer(await users.serviceConsumer.getAddress(), BigNumber.from(50000))
 
   // using ERC677__factory that supports ERC20 to set totalSupply
-  const erc20Factory = new ERC677__factory(users.admin)
-  const erc20 = await erc20Factory.deploy(await users.admin.getAddress(), BigNumber.from(100000), 'DOC', 'DOC')
+  const erc20 = await erc677Factory.deploy(await users.admin.getAddress(), BigNumber.from(100000), 'DOC', 'DOC')
   await erc20.transfer(await users.serviceConsumer.getAddress(), BigNumber.from(50000))
 
   const oneShotScheduleContract = await oneShotScheduleFactory.deploy()
@@ -63,10 +61,24 @@ const plansSetup = async function (oneShotScheduleContract:string, tokenAddress:
   return plans
 }
 
+const encodedCallSamples = async function () : Promise<{successful:string, failing:string}> {
+  // tx call encoded
+  const users = await getUsers()
+  const consumerAddress = await users.serviceConsumer.getAddress()
+  const successful = new ethers.utils.Interface(ERC677Data.abi).encodeFunctionData('balanceOf', [consumerAddress])
+  const failing = new ethers.utils.Interface(ERC677Data.abi).encodeFunctionData('transferFrom', [ethers.constants.AddressZero, ethers.constants.AddressZero, '400000000'])
+
+  return {
+    successful,
+    failing
+  }
+}
+
 export {
   Config,
   getJsonRpcProvider,
   getUsers,
   contractsSetUp,
-  plansSetup
+  plansSetup,
+  encodedCallSamples
 }

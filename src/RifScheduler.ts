@@ -2,7 +2,8 @@ import { Provider } from '@ethersproject/providers'
 import { OneShotSchedule } from './contracts/types/OneShotSchedule'
 import OneShotSchedulerBuild from './contracts/OneShotSchedule.json'
 import { BigNumber, ContractTransaction, Signer, utils } from 'ethers'
-import { ExecutionState, Plan } from './types'
+import { ExecutionState, Plan, Execution } from './types'
+
 // eslint-disable-next-line camelcase
 import { ERC20__factory, ERC677__factory } from './contracts/types'
 import { JsonFragment } from '@ethersproject/abi'
@@ -152,18 +153,29 @@ export default class RifScheduler {
     }
   }
 
-  async schedule (plan: number, contractAddress: string, encodedTransactionCall: utils.BytesLike, gas: BigNumber, executionTimeInSeconds: number, value: BigNumber):Promise<string> {
-    const scheduleResult = await this.schedulerContract.schedule(plan, contractAddress, encodedTransactionCall, gas, executionTimeInSeconds, { value })
+  executionId (e:Execution):string {
+    const encoder = new this.ethers.utils.AbiCoder()
+    const paramTypes = ['address', 'uint256', 'address', 'bytes', 'uint256', 'uint256', 'uint256']
+    const paramValues = [e.requestor, e.plan.toString(),e.to, e.data, e.gas.toString(), e.timestamp.toString(), e.value]
+    const encodedData = encoder.encode(paramTypes,paramValues)
+    return this.ethers.utils.keccak256(encodedData)
+  }
 
-    // TODO: find a better way to get the schedule id
-    const receipt = await scheduleResult.wait()
-    const executionRequested = receipt.events?.find(x => x.event === 'ExecutionRequested')
+  async schedule (plan: number, executionContractAddress: string, encodedTransactionCall: utils.BytesLike, gas: BigNumber, executionTimeInSeconds: number, value: BigNumber):Promise<string> {
+    if (this.signer === undefined) throw new Error('Signer required')
 
-    const executionRequestedArgs = executionRequested?.args
-    const scheduleId = executionRequestedArgs ? executionRequestedArgs[0] : undefined
-    if (!scheduleId) {
-      throw new Error('Unable to get the scheduleId')
+    const scheduleResult = await this.schedulerContract.schedule(plan, executionContractAddress, encodedTransactionCall, gas, executionTimeInSeconds, { value })
+
+    const execution:Execution = {
+      requestor: await this.signer.getAddress(),
+      plan: BigNumber.from(plan),
+      data:encodedTransactionCall,
+      gas: gas,
+      timestamp:BigNumber.from(executionTimeInSeconds),
+      value,
+      to:executionContractAddress
     }
+    const scheduleId = this.executionId(execution)
 
     return scheduleId
   }
@@ -173,4 +185,5 @@ export default class RifScheduler {
 
     return stateResult as ExecutionState
   }
+
 }

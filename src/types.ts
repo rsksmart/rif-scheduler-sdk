@@ -14,7 +14,7 @@ export interface Execution {
   gas: BigNumber;
   timestamp: BigNumber;
   value: BigNumber;
-  state: BigNumber;
+  state?: BigNumber;
 }
 
 export enum ExecutionState {

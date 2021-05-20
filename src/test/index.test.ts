@@ -1,10 +1,11 @@
-import Scheduler from '..'
-import { BigNumber, ethers } from 'ethers'
+import RifScheduler from '../RifScheduler'
+import { BigNumber } from 'ethers'
 import { ExecutionState, IPlan } from '../types'
 import { getUsers, contractsSetUp, plansSetup, encodedCallSamples } from './setup'
 import ERC677Data from '../contracts/ERC677.json'
 import dayjs from 'dayjs'
 import * as cronParser from 'cron-parser'
+import executionFactory from '../executionFactory'
 
 /// this tests give a log message: Duplicate definition of Transfer (Transfer(address,address,uint256,bytes), Transfer(address,address,uint256))
 /// don't worry: https://github.com/ethers-io/ethers.js/issues/905
@@ -21,21 +22,20 @@ function equalPlans (p1:IPlan, p2:IPlan):boolean {
 }
 
 describe('RifScheduler', function (this: {
-    schedulerSDK: Scheduler,
+    schedulerSDK: RifScheduler,
     contracts: {
       schedulerAddress: string;
       tokenAddress: string;
       tokenAddress677: string;
     },
-    plans:IPlan[],
-    encodedTxSamples: {successful:string, failing:string},
+    plans: IPlan[],
+    encodedTxSamples: { successful: string, failing: string },
     consumerAddress: string
   }) {
   beforeEach(async () => {
     const users = await getUsers()
     this.contracts = await contractsSetUp()
-    this.schedulerSDK = await Scheduler.create(ethers, this.contracts.schedulerAddress, users.serviceConsumer,
-      { supportedER677Tokens: [this.contracts.tokenAddress677] })
+    this.schedulerSDK = new RifScheduler(this.contracts.schedulerAddress, users.serviceConsumer, { supportedER677Tokens: [this.contracts.tokenAddress677] })
     this.plans = await plansSetup(this.contracts.schedulerAddress, this.contracts.tokenAddress, this.contracts.tokenAddress677)
     this.encodedTxSamples = await encodedCallSamples()
     this.consumerAddress = await users.serviceConsumer.getAddress()
@@ -94,10 +94,10 @@ describe('RifScheduler', function (this: {
 
     const encodedMethodCall = this.encodedTxSamples.successful
     const gas = await this.schedulerSDK.estimateGas(ERC677Data.abi, this.contracts.tokenAddress, 'balanceOf', [this.consumerAddress])
-    const timestamp = dayjs().add(1, 'day').unix()
+    const timestamp = dayjs().add(1, 'day').toDate()
     const valueToTransfer = BigNumber.from(1)
 
-    const execution = this.schedulerSDK.getExecution(planId, this.contracts.tokenAddress, encodedMethodCall, gas!, timestamp, valueToTransfer)
+    const execution = executionFactory(planId, this.contracts.tokenAddress, encodedMethodCall, gas!, timestamp, valueToTransfer, this.consumerAddress)
     const scheduledExecution = await this.schedulerSDK.schedule(execution)
 
     expect(scheduledExecution).toBeDefined()
@@ -109,10 +109,10 @@ describe('RifScheduler', function (this: {
 
     const encodedMethodCall = this.encodedTxSamples.successful
     const gas = await this.schedulerSDK.estimateGas(ERC677Data.abi, this.contracts.tokenAddress, 'balanceOf', [this.consumerAddress])
-    const timestamp = dayjs().add(1, 'day').unix()
+    const timestamp = dayjs().add(1, 'day').toDate()
     const valueToTransfer = BigNumber.from(1)
 
-    const execution = this.schedulerSDK.getExecution(planId, this.contracts.tokenAddress, encodedMethodCall, gas!, timestamp, valueToTransfer)
+    const execution = executionFactory(planId, this.contracts.tokenAddress, encodedMethodCall, gas!, timestamp, valueToTransfer, this.consumerAddress)
     const scheduleExecution = await this.schedulerSDK.schedule(execution)
 
     const state = await this.schedulerSDK.getExecutionState(execution)
@@ -123,18 +123,19 @@ describe('RifScheduler', function (this: {
 
   test('should get scheduled multiple transactions', async () => {
     const planId = 1
-    const cronExpression = '*/2 * * * *'
-    const quantity = 10
+    const cronExpression = '*/15 * * * *'
+    const quantity = 5
     await this.schedulerSDK.purchasePlan(planId, quantity)
 
     const encodedMethodCall = this.encodedTxSamples.successful
     const gas = await this.schedulerSDK.estimateGas(ERC677Data.abi, this.contracts.tokenAddress, 'balanceOf', [this.consumerAddress])
-    const timestamp = dayjs(cronParser.parseExpression(cronExpression).next().toDate()).unix()
+    const timestamp = cronParser.parseExpression(cronExpression, { startDate: dayjs().add(1, 'day').toDate() }).next().toDate()
     const valueToTransfer = BigNumber.from(1)
 
-    const execution = this.schedulerSDK.getExecution(planId, this.contracts.tokenAddress, encodedMethodCall, gas!, timestamp, valueToTransfer)
-    const scheduleExecutions = await Promise.all(this.schedulerSDK.scheduleMany(execution, cronExpression, quantity))
+    const execution = executionFactory(planId, this.contracts.tokenAddress, encodedMethodCall, gas!, timestamp, valueToTransfer, this.consumerAddress)
+    const scheduleExecutions = await Promise.all(await this.schedulerSDK.scheduleMany(execution, cronExpression, quantity))
 
     expect(scheduleExecutions).toBeDefined()
+    expect(scheduleExecutions.length).toBe(quantity)
   })
 })

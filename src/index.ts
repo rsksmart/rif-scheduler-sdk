@@ -1,2 +1,4 @@
 import RifScheduler from './RifScheduler'
-export default RifScheduler
+import executionFactory from './executionFactory'
+
+export { RifScheduler, executionFactory }

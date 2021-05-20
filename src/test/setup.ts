@@ -31,7 +31,7 @@ const getUsers = async function ():Promise<users> {
 }
 
 const contractsSetUp = async function (): Promise<{schedulerAddress:string, tokenAddress:string, tokenAddress677:string}> {
-  ethers.utils.Logger.setLogLevel(ethers.utils.Logger.levels.ERROR)
+  ethers.utils.Logger.setLogLevel(ethers.utils.Logger.levels.OFF)
   const users = await getUsers()
   const oneShotScheduleFactory = new OneShotSchedule__factory(users.admin)
 
@@ -45,7 +45,7 @@ const contractsSetUp = async function (): Promise<{schedulerAddress:string, toke
 
   const oneShotScheduleContract = await oneShotScheduleFactory.deploy()
   await oneShotScheduleContract.initialize(await users.serviceProvider.getAddress(), await users.payee.getAddress())
-  ethers.utils.Logger.setLogLevel(ethers.utils.Logger.levels.WARNING)
+  // ethers.utils.Logger.setLogLevel(ethers.utils.Logger.levels.WARNING)
   return { schedulerAddress: oneShotScheduleContract.address, tokenAddress: erc20.address, tokenAddress677: erc677.address }
 }
 

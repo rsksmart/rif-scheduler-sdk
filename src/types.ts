@@ -16,3 +16,12 @@ export interface Execution {
   value: BigNumber;
   state: BigNumber;
 }
+
+export enum ExecutionState {
+  Scheduled = 0,
+  ExecutionSuccessful = 1,
+  ExecutionFailed = 2,
+  Overdue = 3,
+  Refunded = 4,
+  Cancelled = 5
+}

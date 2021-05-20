@@ -2,7 +2,7 @@ import { Provider } from '@ethersproject/providers'
 import { OneShotSchedule } from './contracts/types/OneShotSchedule'
 import OneShotSchedulerBuild from './contracts/OneShotSchedule.json'
 import { BigNumber, ContractTransaction, Signer, utils } from 'ethers'
-import { Plan } from './types'
+import { ExecutionState, Plan } from './types'
 // eslint-disable-next-line camelcase
 import { ERC20__factory, ERC677__factory } from './contracts/types'
 import { JsonFragment } from '@ethersproject/abi'
@@ -152,7 +152,25 @@ export default class RifScheduler {
     }
   }
 
-  async schedule (plan: number, contractAddress: string, encodedTransactionCall: utils.BytesLike, gas: BigNumber, executionTimeInSeconds: number, value: BigNumber):Promise<ContractTransaction> {
-    return this.schedulerContract.schedule(plan, contractAddress, encodedTransactionCall, gas, executionTimeInSeconds, { value })
+  async schedule (plan: number, contractAddress: string, encodedTransactionCall: utils.BytesLike, gas: BigNumber, executionTimeInSeconds: number, value: BigNumber):Promise<string> {
+    const scheduleResult = await this.schedulerContract.schedule(plan, contractAddress, encodedTransactionCall, gas, executionTimeInSeconds, { value })
+
+    // TODO: find a better way to get the schedule id
+    const receipt = await scheduleResult.wait()
+    const executionRequested = receipt.events?.find(x => x.event === 'ExecutionRequested')
+
+    const executionRequestedArgs = executionRequested?.args
+    const scheduleId = executionRequestedArgs ? executionRequestedArgs[0] : undefined
+    if (!scheduleId) {
+      throw new Error('Unable to get the scheduleId')
+    }
+
+    return scheduleId
+  }
+
+  async getCurrentState (id: string): Promise<ExecutionState> {
+    const stateResult = await this.schedulerContract.getState(id)
+
+    return stateResult as ExecutionState
   }
 }

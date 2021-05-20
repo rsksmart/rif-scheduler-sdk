@@ -11,8 +11,8 @@
     "test": "npx jest",
     "test:coverage": "npx jest --coverage",
     "test:ci": "npx jest src/*/* --coverage --ci",
-    "lint": "npx eslint ./src --ext .js,.ts",
-    "lint:fix": "npx eslint ./src --ext .js,.ts --fix",
+    "lint": "npx eslint ./src --ext .json,.js,.ts",
+    "lint:fix": "npx eslint ./src --ext .json,.js,.ts --fix",
     "build": "npx webpack",
     "postinstall": "typechain \"src/contracts/*.json\" --target=ethers-v5 --out-dir=src/contracts/types"
   },
@@ -41,6 +41,7 @@
     "eslint-config-standard": "^16.0.2",
     "eslint-plugin-import": "^2.22.1",
     "eslint-plugin-jest": "^24.3.6",
+    "eslint-plugin-json": "^3.0.0",
     "eslint-plugin-node": "^11.1.0",
     "eslint-plugin-promise": "^4.3.1",
     "ganache-cli": "^6.12.2",

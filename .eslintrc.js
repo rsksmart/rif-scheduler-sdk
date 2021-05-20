@@ -5,7 +5,8 @@ module.exports = {
     'jest/globals': true
   },
   extends: [
-    'standard'
+    'standard',
+    'plugin:json/recommended'
   ],
   parser: '@typescript-eslint/parser',
   parserOptions: {
@@ -17,5 +18,6 @@ module.exports = {
     'jest'
   ],
   rules: {
+    '@typescript-eslint/no-unused-vars': 'error'
   }
 }

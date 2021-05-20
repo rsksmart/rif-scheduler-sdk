@@ -1,6 +1,6 @@
 import Scheduler from '..'
 import { BigNumber, ethers } from 'ethers'
-import { Plan } from '../types'
+import { ExecutionState, Plan } from '../types'
 import { getUsers, contractsSetUp, plans } from './setup'
 import ERC677Data from '../contracts/ERC677.json'
 import dayjs from 'dayjs'
@@ -114,9 +114,37 @@ describe('RifScheduler', function (this: {
     const timestamp = dayjs().add(1, 'day').unix()
     const valueToTransfer = BigNumber.from(1)
 
-    const scheduleResult =
+    const scheduleId =
      await this.schedulerSDK.schedule(planId, this.contracts.tokenAddress, encodedMethodCall, gas!, timestamp, valueToTransfer)
 
-    expect(scheduleResult).toBeDefined()
+    expect(scheduleId).toBeDefined()
+  })
+
+  test('should get scheduled transaction state', async () => {
+    // purchase
+    const planId = 1
+    const selectedPlan = { ...plans[planId] }
+    selectedPlan.token = this.contracts.tokenAddress677
+    await this.schedulerSDK.purchasePlan(planId, 1)
+
+    // tx call encoded
+    const users = await getUsers()
+    const consumerAddress = await users.serviceConsumer.getAddress()
+    const methodName = 'balanceOf'
+    const methodParams = [consumerAddress]
+    const encodedMethodCall =
+      new ethers.utils.Interface(ERC677Data.abi).encodeFunctionData(methodName, methodParams)
+
+    const gas = await this.schedulerSDK.estimateGas(ERC677Data.abi, this.contracts.tokenAddress, 'balanceOf', [consumerAddress])
+    const timestamp = dayjs().add(1, 'day').unix()
+    const valueToTransfer = BigNumber.from(1)
+
+    const scheduleId =
+     await this.schedulerSDK.schedule(planId, this.contracts.tokenAddress, encodedMethodCall, gas!, timestamp, valueToTransfer)
+
+    const state = await this.schedulerSDK.getCurrentState(scheduleId)
+
+    expect(scheduleId).toBeDefined()
+    expect(state).toBe(ExecutionState.Scheduled)
   })
 })

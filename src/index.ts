@@ -1,3 +1,4 @@
-export class Template {
-  hello (): string { return 'RIF Web SDK Template' }
-}
+import RifScheduler from './RifScheduler'
+import executionFactory from './executionFactory'
+
+export { RifScheduler, executionFactory }

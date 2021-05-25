@@ -1,7 +1,7 @@
 import { Provider } from '@ethersproject/providers'
 import { OneShotSchedule } from './contracts/types/OneShotSchedule'
 import { BigNumber, ContractTransaction, Signer, utils, getDefaultProvider } from 'ethers'
-import { ExecutionState, IPlan, IExecution } from './types'
+import { ExecutionState, IPlan, IExecutionRequest, IExecution } from './types'
 import dayjs from 'dayjs'
 import * as cronParser from 'cron-parser'
 
@@ -134,20 +134,12 @@ export default class RifScheduler {
     }
   }
 
-  executionId (e:IExecution):string {
-    const encoder = new utils.AbiCoder()
-    const paramTypes = ['address', 'uint256', 'address', 'bytes', 'uint256', 'uint256', 'uint256']
-    const paramValues = [e.requestor, e.plan.toString(), e.to, e.data, e.gas.toString(), e.timestamp.toString(), e.value]
-    const encodedData = encoder.encode(paramTypes, paramValues)
-    return utils.keccak256(encodedData)
-  }
-
-  async schedule (execution:IExecution):Promise<ContractTransaction> {
+  async schedule (execution:IExecutionRequest):Promise<ContractTransaction> {
     if (this.signer === undefined) throw new Error('Signer required')
     return this.schedulerContract.schedule(execution.plan, execution.to, execution.data, execution.gas, execution.timestamp, { value: execution.value })
   }
 
-  async scheduleMany (execution:IExecution, cronExpression:string, quantity:number): Promise<Promise<ContractTransaction>[]> {
+  async scheduleMany (execution:IExecutionRequest, cronExpression:string, quantity:number): Promise<Promise<ContractTransaction>[]> {
     if (this.signer === undefined) throw new Error('Signer required')
     const remainingExecutions = await this.remainingExecutions(execution.plan)
     if (remainingExecutions < quantity) throw new Error('Not enough remaining executions.')
@@ -160,14 +152,14 @@ export default class RifScheduler {
         break
       }
       const nextTimestamp = dayjs(next.toDate()).unix()
-      const nextExecution: IExecution = { ...execution, timestamp: BigNumber.from(nextTimestamp) }
+      const nextExecution: IExecutionRequest = { ...execution, timestamp: BigNumber.from(nextTimestamp) }
       scheduledTransactions.push(this.schedule(nextExecution))
     }
     return scheduledTransactions
   }
 
   async getExecutionState (execution: string | IExecution): Promise<ExecutionState> {
-    const id = typeof execution === 'string' ? execution : this.executionId(execution)
+    const id = typeof execution === 'string' ? execution : execution.id
     const stateResult:ExecutionState = await this.schedulerContract.getState(id)
     return stateResult
   }

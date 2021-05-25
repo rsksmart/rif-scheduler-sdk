@@ -6,7 +6,7 @@ export interface IPlan {
   active: boolean;
 }
 
-export interface IExecution {
+export interface IExecutionRequest {
   requestor: string;
   plan: BigNumber;
   to: string;
@@ -14,6 +14,9 @@ export interface IExecution {
   gas: BigNumber;
   timestamp: BigNumber;
   value: BigNumber;
+}
+export interface IExecution extends IExecutionRequest {
+  id:string;
   state?: BigNumber;
 }
 

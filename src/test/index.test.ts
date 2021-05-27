@@ -146,4 +146,42 @@ describe('RifScheduler', function (this: {
     expect(count).toBeGreaterThan(0)
     expect(count).toBe(this.plans.length)
   })
+
+  test('should be able to cancel a scheduled tx', async () => {
+    const planId = 1
+    await this.schedulerSDK.purchasePlan(planId, 1)
+
+    const encodedMethodCall = this.encodedTxSamples.successful
+    const gas = await this.schedulerSDK.estimateGas(ERC677Data.abi, this.contracts.tokenAddress, 'balanceOf', [this.consumerAddress])
+    const timestamp = dayjs().add(1, 'day').toDate()
+    const valueToTransfer = BigNumber.from(1)
+
+    const execution = executionFactory(planId, this.contracts.tokenAddress, encodedMethodCall, gas!, timestamp, valueToTransfer, this.consumerAddress)
+    const scheduledExecution = await this.schedulerSDK.schedule(execution)
+    await scheduledExecution.wait(1)
+
+    const initialState = await this.schedulerSDK.getExecutionState(execution)
+
+    await this.schedulerSDK.cancelScheduling(execution)
+
+    const stateAfterCancel = await this.schedulerSDK.getExecutionState(execution)
+
+    expect(initialState).toBe(ExecutionState.Scheduled)
+    expect(stateAfterCancel).toBe(ExecutionState.Cancelled)
+  })
+
+  test('cancel should fail with a not scheduled tx', async () => {
+    const planId = 1
+
+    const encodedMethodCall = this.encodedTxSamples.successful
+    const gas = 100
+    const timestamp = dayjs().add(1, 'day').toDate()
+    const valueToTransfer = BigNumber.from(1)
+
+    const execution = executionFactory(planId, this.contracts.tokenAddress, encodedMethodCall, gas!, timestamp, valueToTransfer, this.consumerAddress)
+
+    await expect(this.schedulerSDK.cancelScheduling(execution))
+      .rejects
+      .toThrow('VM Exception while processing transaction: revert Transaction not scheduled')
+  })
 })

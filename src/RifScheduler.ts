@@ -171,4 +171,9 @@ export default class RifScheduler {
     const stateResult:ExecutionState = await this.schedulerContract.getState(id)
     return stateResult
   }
+
+  async cancelScheduling (execution: string | IExecution): Promise<void> {
+    const id = typeof execution === 'string' ? execution : this.executionId(execution)
+    await this.schedulerContract.cancelScheduling(id)
+  }
 }

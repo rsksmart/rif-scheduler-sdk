@@ -46,7 +46,12 @@ export default class RifScheduler {
     this.options = options
   }
 
-  async getPlan (index:number):Promise<IPlan> {
+  async getPlansCount (): Promise<BigNumber> {
+    const count = await this.schedulerContract.plansCount()
+    return count
+  }
+
+  async getPlan (index:number): Promise<IPlan> {
     const plan = await this.schedulerContract.plans(BigNumber.from(index))
     return plan as IPlan
   }

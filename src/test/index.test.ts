@@ -143,7 +143,7 @@ describe('RifScheduler', function (this: {
     const count = await this.schedulerSDK
       .getPlansCount()
 
-    expect(count.gte(BigNumber.from(0))).toBeTruthy()
-    expect(count.eq(BigNumber.from(this.plans.length))).toBeTruthy()
+    expect(count).toBeGreaterThan(0)
+    expect(count).toBe(this.plans.length)
   })
 })

@@ -31,5 +31,9 @@ export enum ExecutionState {
 
 export const ErrorMessages = {
   SIGNER_REQUIRED: ''
+}
 
+export type ScheduledExecution = {
+  id:string;
+  timestamp: Date
 }

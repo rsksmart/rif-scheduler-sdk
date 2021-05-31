@@ -1,7 +1,7 @@
 import { Provider } from '@ethersproject/providers'
 import { OneShotSchedule } from './contracts/types/OneShotSchedule'
-import { BigNumber, ContractTransaction, Signer, utils, getDefaultProvider } from 'ethers'
-import { ExecutionState, IPlan, IExecutionRequest, IExecution } from './types'
+import { BigNumber, ContractTransaction, Signer, utils, getDefaultProvider, ContractReceipt, Event } from 'ethers'
+import { ExecutionState, IPlan, IExecutionRequest, IExecution, ScheduledExecution } from './types'
 import dayjs from 'dayjs'
 import * as cronParser from 'cron-parser'
 
@@ -139,23 +139,41 @@ export default class RifScheduler {
     return this.schedulerContract.schedule(execution.plan, execution.to, execution.data, execution.gas, execution.timestamp, { value: execution.value })
   }
 
-  async scheduleMany (execution:IExecutionRequest, cronExpression:string, quantity:number): Promise<Promise<ContractTransaction>[]> {
+  async scheduleMany (execution:IExecutionRequest, cronExpression:string, quantity:number): Promise<ContractTransaction> {
     if (this.signer === undefined) throw new Error('Signer required')
     const remainingExecutions = await this.remainingExecutions(execution.plan)
-    if (remainingExecutions < quantity) throw new Error('Not enough remaining executions.')
-    const scheduledTransactions:Promise<ContractTransaction>[] = []
-    let next:any
+    if (remainingExecutions < quantity) throw new Error("You don't enough remaining executions.")
+
+    const options = {
+      currentDate: dayjs.unix(execution.timestamp.toNumber()).toDate(),
+      iterator: true
+    }
+    const interval = cronParser.parseExpression(cronExpression, options)
+    const requestedExecutions:string[] = []
+
+    let next = execution.timestamp.toNumber() // first execution
+
     for (let i = 0; i < quantity; i++) {
+      const encoder = new utils.AbiCoder()
+      const encodedExecution = encoder.encode(['uint256', 'address', 'bytes', 'uint256', 'uint256', 'uint256'], [execution.plan, execution.to, execution.data, execution.gas, BigNumber.from(next), execution.value])
+      requestedExecutions.push(encodedExecution)
       try {
-        next = cronParser.parseExpression(cronExpression).next()
+        const nextDate:any = interval.next()
+        next = dayjs(nextDate.value.toDate()).unix()
       } catch (e) {
         break
       }
-      const nextTimestamp = dayjs(next.toDate()).unix()
-      const nextExecution: IExecutionRequest = { ...execution, timestamp: BigNumber.from(nextTimestamp) }
-      scheduledTransactions.push(this.schedule(nextExecution))
     }
-    return scheduledTransactions
+    if (requestedExecutions.length !== quantity) throw new Error(`You cannot schedule transactions using ${cronExpression}`)
+    const totalValue = execution.value.mul(requestedExecutions.length)
+    return this.schedulerContract.batchSchedule(requestedExecutions, { value: totalValue })
+  }
+
+  parseScheduleManyReceipt (receipt:ContractReceipt):ScheduledExecution[] {
+    return (receipt.events)
+      ? receipt.events.filter((ev:Event) => ev.args?.id !== undefined && ev.args?.timestamp !== undefined)
+        .map(ev => (({ id: ev.args!.id, timestamp: dayjs.unix(ev!.args!.timestamp).toDate() }) as ScheduledExecution))
+      : []
   }
 
   async getExecutionState (execution: string | IExecution): Promise<ExecutionState> {

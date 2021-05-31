@@ -142,10 +142,23 @@ describe('RifScheduler', function (this: {
     const valueToTransfer = BigNumber.from(1)
 
     const execution = executionFactory(planId, this.contracts.tokenAddress, encodedMethodCall, gas!, timestamp, valueToTransfer, this.consumerAddress)
-    const scheduleExecutions = await Promise.all(await this.schedulerSDK.scheduleMany(execution, cronExpression, quantity))
-    const receipts = await Promise.all(scheduleExecutions.map(async t => await t.wait(1)))
-    expect(receipts.every(receipt => hasEvent(receipt, 'ExecutionRequested'))).toBe(true)
-    expect(scheduleExecutions.length).toBe(quantity)
+    const scheduleExecutions = await this.schedulerSDK.scheduleMany(execution, cronExpression, quantity)
+    const receipt = await scheduleExecutions.wait(1)
+    const parsedResponse = this.schedulerSDK.parseScheduleManyReceipt(receipt)
+    expect(hasEvent(receipt, 'ExecutionRequested')).toBe(true)
+    expect(parsedResponse.length).toBe(quantity)
+
+    for (let i = 0; i < quantity; i++) {
+      expect(dayjs(parsedResponse[i].timestamp).diff(dayjs(timestamp), 'minutes')).toBe(15 * i)
+    }
+  })
+
+  test('should fail to scheduled multiple transactions with no plan balance', async () => {
+    const encodedMethodCall = this.encodedTxSamples.successful
+    const execution = executionFactory(0, this.contracts.tokenAddress, encodedMethodCall, 1000, dayjs().toDate(), 10000, this.consumerAddress)
+    expect(async () => {
+      await this.schedulerSDK.scheduleMany(execution, '*/15 * * * *', 1)
+    }).rejects.toThrow("You don't enough remaining executions.")
   })
 
   test('should return the plans count', async () => {

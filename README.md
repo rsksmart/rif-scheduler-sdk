@@ -26,8 +26,109 @@
   </a>
 </p>
 
+# rif-scheduler-sdk
+
+This is the sdk for the OneShootScheduler smart contract.
+
+## Getting Started
+
+### Installation
+
 ```
-npm i @rsksmart/rif-scheduler-sdk
+npm i @rsksmart/rif-scheduler-sdk ethers
+```
+
+### Initialization with metamask
+
+```javascript
+import { RifScheduler } from "@rsksmart/rif-scheduler-sdk";
+import { providers } from "ethers";
+
+const provider = new providers.Web3Provider(web3.currentProvider);
+
+// Creates instance with provider, you can only do get operations
+const rifScheduler = new RifScheduler(serviceProviderContractAddress, provider);
+
+const signer = provider.getSigner();
+
+// Creates instance with signer, you can do any kind of operation
+const rifScheduler = new RifScheduler(serviceProviderContractAddress, signer);
+```
+
+### Initialization with RPC / Ganache
+
+```javascript
+import { RifScheduler } from "@rsksmart/rif-scheduler-sdk";
+import { providers } from "ethers";
+
+const url = "http://localhost:8545";
+
+const provider = new providers.JsonRpcProvider(url);
+
+// Creates instance with provider, you can only do get operations
+const rifScheduler = new RifScheduler(serviceProviderContractAddress, provider);
+
+const signer = provider.getSigner();
+
+// Creates instance with signer, you can do any kind of operation
+const rifScheduler = new RifScheduler(serviceProviderContractAddress, signer);
+```
+
+### Getting a plan
+
+```javascript
+const rifScheduler = new RifScheduler(serviceProviderContractAddress, provider);
+
+const planIndex = 0;
+const plan = await rifScheduler.getPlan(planIndex);
+
+//  {
+//    pricePerExecution: 10000000000000;
+//    window: 300;
+//    token: 0x...;
+//    active: true;
+//  }
+```
+
+## Purchasing executions
+
+```javascript
+const rifScheduler = new RifScheduler(serviceProviderContractAddress, signer);
+
+const executionsQuantity = 2;
+const totalAmount = plan.pricePerExecution.mul(executionsQuantity)
+
+// first you need to approve the totalAmount of tokens
+await this.schedulerSDK.approveToken(plan.token, totalAmount)
+
+const purchaseTransaction = await this.schedulerSDK.purchasePlan(planIndex, executionsQuantity)
+
+// we recommend to wait at least 10 confirmations to be sure tha your transaction was processed ok.
+await purchaseTransaction.wait(12)
+```
+
+## Verifying your remaining executions
+
+```javascript
+const rifScheduler = new RifScheduler(serviceProviderContractAddress, signer);
+
+const remainingExecutions = await this.schedulerSDK.remainingExecutions(planIndex)
+
+//  2
+```
+
+## Scheduling a single execution
+
+```javascript
+const rifScheduler = new RifScheduler(serviceProviderContractAddress, signer);
+
+const encodedFunctionCall = new utils.Interface(MyContract.abi).encodeFunctionData('<MyContractFunction>', [arrayOfMyContractFunctionParameters])
+
+const execution = executionFactory(planIndex, myContractAddress, encodedMethodCall, gas, executeAt, BigNumber.from(0), yourAccountAddress)
+const scheduledExecutionTransaction = await this.schedulerSDK.schedule(execution)
+
+// we recommend to wait at least 10 confirmations to be sure tha your transaction was processed ok.
+await scheduledExecutionTransaction.wait(12)
 ```
 
 ## Run for development

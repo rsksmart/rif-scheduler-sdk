@@ -138,4 +138,12 @@ describe('RifScheduler', function (this: {
     expect(scheduleExecutions).toBeDefined()
     expect(scheduleExecutions.length).toBe(quantity)
   })
+
+  test('should return the plans count', async () => {
+    const count = await this.schedulerSDK
+      .getPlansCount()
+
+    expect(count).toBeGreaterThan(0)
+    expect(count).toBe(this.plans.length)
+  })
 })

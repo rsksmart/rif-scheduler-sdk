@@ -46,7 +46,7 @@ npm i @rsksmart/rif-scheduler-sdk ethers
 
 In order to create an instance of `RifScheduler` you will need an ethers provider or signer.
 
-The provider will only allow get operations, such as `getPlan`. In the other hand the signer will allow all operations, such as `purchasePlan`, `schedule`, etc.
+The provider will only allow `get` operations, such as `getPlan`. In the other hand the signer will allow all operations, such as `purchasePlan`, `schedule`, etc.
 
 #### with metamask
 
@@ -56,12 +56,12 @@ import { providers } from "ethers";
 
 const provider = new providers.Web3Provider(web3.currentProvider);
 
-// Creates instance with provider, you can only do get operations
+// Creates instance with provider, you can execute get operations
 const rifScheduler = new RifScheduler(serviceProviderContractAddress, provider);
 
 const signer = provider.getSigner();
 
-// Creates instance with signer, you can do any kind of operation
+// Creates instance with signer, you can execute any kind of operation
 const rifScheduler = new RifScheduler(serviceProviderContractAddress, signer);
 ```
 
@@ -84,9 +84,9 @@ const signer = provider.getSigner();
 const rifScheduler = new RifScheduler(serviceProviderContractAddress, signer);
 ```
 
-### Getting a plan
+### Obtaining a plan
 
-First of all, you need to get a plan from the service provider, this will give you the price per execution, the payment token and the execution window in seconds among other things.
+First of all, you need to get a plan from the service provider, which will give you the price per execution, the payment token and the execution window in seconds, among other things.
 
 ```javascript
 const rifScheduler = new RifScheduler(serviceProviderContractAddress, provider);
@@ -104,7 +104,7 @@ const plan = await rifScheduler.getPlan(planIndex);
 
 ### Purchasing executions
 
-With the information of the previous step, you can approve and purchase executions to be able to schedule their in the future.
+With the information of the previous step, you can approve and purchase executions to be able to schedule them in the future.
 
 ```javascript
 const rifScheduler = new RifScheduler(serviceProviderContractAddress, signer);
@@ -117,17 +117,17 @@ await rifScheduler.approveToken(plan.token, totalAmount)
 
 const purchaseTransaction = await rifScheduler.purchasePlan(planIndex, executionsQuantity)
 
-// we recommend to wait at least 10 confirmations to be sure tha your transaction was processed ok.
+// we recommend to wait at least 10 confirmations to be sure that your transaction was processed correctly.
 await purchaseTransaction.wait(12)
 ```
 
 ### Verifying your remaining executions
 
-It will give you how many executions you have left.
+It will return how many executions you have left.
 
 You will need to buy some executions if you want to schedule something (see previous step).
 
-This is an optional step, but it`is useful because it will give you a feedback that all that you have done in the previous steps was ok.
+This is an optional step, but it is useful because it will give you feedback that everything you have done in the previous steps was correct.
 
 ```javascript
 const rifScheduler = new RifScheduler(serviceProviderContractAddress, signer);
@@ -143,7 +143,7 @@ Here you can see how to schedule the execution of any smart contract.
 
 This will be executed by the service provider according to the date and time specified in `executedAt`.
 
-Keep in mind that the execution will occur in a time frame given by the plan window that you bought earlier. 
+Keep in mind that the execution will occur in a time frame given by the plan window that you purchased earlier.
 
 ```javascript
 const rifScheduler = new RifScheduler(serviceProviderContractAddress, signer);
@@ -159,7 +159,7 @@ await scheduledExecutionTransaction.wait(12)
 
 ## How to contribute
 
-If you want to contribute, here you have the steps you need to run this project locally.
+If you want to contribute, here are the steps you need to run this project locally.
 
 ### Run for development
 

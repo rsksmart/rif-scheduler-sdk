@@ -2,7 +2,7 @@
   "name": "@rsksmart/rif-scheduler-sdk",
   "version": "1.0.0",
   "description": "RIF Scheduler SDK",
-  "main": "dist/bundle.js",
+  "main": "dist/index.js",
   "files": [
     "dist"
   ],
@@ -13,7 +13,7 @@
     "test:ci": "npx jest src/*/* --coverage --ci",
     "lint": "npx eslint ./src --ext .json,.js,.ts",
     "lint:fix": "npx eslint ./src --ext .json,.js,.ts --fix",
-    "build": "npx webpack",
+    "build": "rimraf ./dist && tsc",
     "postinstall": "typechain \"src/contracts/*.json\" --target=ethers-v5 --out-dir=src/contracts/types"
   },
   "repository": {
@@ -46,11 +46,11 @@
     "eslint-plugin-promise": "^4.3.1",
     "ganache-cli": "^6.12.2",
     "jest": "^26.6.3",
+    "rimraf": "^3.0.2",
     "ts-jest": "^26.5.6",
     "ts-loader": "^9.1.2",
     "typechain": "^5.0.0",
-    "typescript": "^4.2.4",
-    "webpack-cli": "^4.7.0"
+    "typescript": "^4.2.4"
   },
   "dependencies": {
     "cron-parser": "^3.5.0",

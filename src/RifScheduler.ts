@@ -183,7 +183,7 @@ export default class RifScheduler {
   }
 
   async cancelScheduling (execution: string | IExecution): Promise<void> {
-    const id = typeof execution === 'string' ? execution : this.executionId(execution)
+    const id = typeof execution === 'string' ? execution : execution.id
     await this.schedulerContract.cancelScheduling(id)
   }
 }

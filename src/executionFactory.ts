@@ -1,6 +1,14 @@
 import { BigNumber, BigNumberish, utils } from 'ethers'
-import { IExecution } from './types'
+import { IExecution, IExecutionRequest } from './types'
 import dayjs from 'dayjs'
+
+const executionId = (e:IExecutionRequest):string => {
+  const encoder = new utils.AbiCoder()
+  const paramTypes = ['address', 'uint256', 'address', 'bytes', 'uint256', 'uint256', 'uint256']
+  const paramValues = [e.requestor, e.plan.toString(), e.to, e.data, e.gas.toString(), e.timestamp.toString(), e.value]
+  const encodedData = encoder.encode(paramTypes, paramValues)
+  return utils.keccak256(encodedData)
+}
 
 const executionFactory = (
   plan: BigNumberish,
@@ -11,7 +19,7 @@ const executionFactory = (
   value: BigNumberish,
   from:string
 ): IExecution => {
-  const execution:IExecution = {
+  const execution:IExecutionRequest = {
     requestor: from,
     plan: BigNumber.from(plan),
     data: encodedTransactionCall,
@@ -20,7 +28,10 @@ const executionFactory = (
     value: BigNumber.from(value),
     to: executionContractAddress
   }
-  return execution
+  return ({
+    id: executionId(execution),
+    ...execution
+  })
 }
 
-export default executionFactory
+export { executionFactory, executionId }

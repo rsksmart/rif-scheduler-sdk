@@ -1,11 +1,12 @@
 import RifScheduler from '../RifScheduler'
 import { BigNumber } from 'ethers'
+import { ContractReceipt } from '@ethersproject/contracts'
 import { ExecutionState, IPlan } from '../types'
 import { getUsers, contractsSetUp, plansSetup, encodedCallSamples } from './setup'
 import ERC677Data from '../contracts/ERC677.json'
 import dayjs from 'dayjs'
 import * as cronParser from 'cron-parser'
-import executionFactory from '../executionFactory'
+import { executionFactory } from '../executionFactory'
 
 /// this tests give a log message: Duplicate definition of Transfer (Transfer(address,address,uint256,bytes), Transfer(address,address,uint256))
 /// don't worry: https://github.com/ethers-io/ethers.js/issues/905
@@ -19,6 +20,10 @@ function equalPlans (p1:IPlan, p2:IPlan):boolean {
     p1.token === p2.token &&
     p1.window.toString() === p2.window.toString()
   )
+}
+
+function hasEvent (receipt:ContractReceipt, eventName:string):boolean {
+  return (receipt?.events) ? receipt.events.findIndex(e => e.event === eventName) > -1 : false
 }
 
 describe('RifScheduler', function (this: {
@@ -54,16 +59,18 @@ describe('RifScheduler', function (this: {
       )
 
     const purchaseResult = await this.schedulerSDK.purchasePlan(0, 1)
-
-    expect(purchaseResult).toBeDefined()
+    const receipt = await purchaseResult.wait(1)
+    expect(hasEvent(receipt, 'ExecutionPurchased')).toBe(true)
+    const remainingExecutions = await this.schedulerSDK.remainingExecutions(BigNumber.from(0))
+    expect(remainingExecutions.toString(10)).toBe('1')
   })
 
   test('purchase plan ERC667', async () => {
     const selectedPlan = this.plans[1]
     selectedPlan.token = this.contracts.tokenAddress677
-    const purchaseResult = await this.schedulerSDK.purchasePlan(1, 1)
-
-    expect(purchaseResult).toBeDefined()
+    await this.schedulerSDK.purchasePlan(1, 1)
+    const remainingExecutions = await this.schedulerSDK.remainingExecutions(BigNumber.from(1))
+    expect(remainingExecutions.toString(10)).toBe('1')
   })
 
   test('should be able to estimateGas for a valid tx', async () => {
@@ -90,8 +97,8 @@ describe('RifScheduler', function (this: {
 
   test('should schedule transaction', async () => {
     const planId = 1
+    const remainingExecutionsInitial = await this.schedulerSDK.remainingExecutions(BigNumber.from(planId))
     await this.schedulerSDK.purchasePlan(planId, 1)
-
     const encodedMethodCall = this.encodedTxSamples.successful
     const gas = await this.schedulerSDK.estimateGas(ERC677Data.abi, this.contracts.tokenAddress, 'balanceOf', [this.consumerAddress])
     const timestamp = dayjs().add(1, 'day').toDate()
@@ -99,8 +106,10 @@ describe('RifScheduler', function (this: {
 
     const execution = executionFactory(planId, this.contracts.tokenAddress, encodedMethodCall, gas!, timestamp, valueToTransfer, this.consumerAddress)
     const scheduledExecution = await this.schedulerSDK.schedule(execution)
-
-    expect(scheduledExecution).toBeDefined()
+    const receipt = await scheduledExecution.wait(1)
+    expect(hasEvent(receipt, 'ExecutionRequested')).toBe(true)
+    const remainingExecutionsFinal = await this.schedulerSDK.remainingExecutions(BigNumber.from(planId))
+    expect(remainingExecutionsFinal - remainingExecutionsInitial).toBe(0)
   })
 
   test('should get scheduled transaction state', async () => {
@@ -133,10 +142,23 @@ describe('RifScheduler', function (this: {
     const valueToTransfer = BigNumber.from(1)
 
     const execution = executionFactory(planId, this.contracts.tokenAddress, encodedMethodCall, gas!, timestamp, valueToTransfer, this.consumerAddress)
-    const scheduleExecutions = await Promise.all(await this.schedulerSDK.scheduleMany(execution, cronExpression, quantity))
+    const scheduleExecutions = await this.schedulerSDK.scheduleMany(execution, cronExpression, quantity)
+    const receipt = await scheduleExecutions.wait(1)
+    const parsedResponse = this.schedulerSDK.parseScheduleManyReceipt(receipt)
+    expect(hasEvent(receipt, 'ExecutionRequested')).toBe(true)
+    expect(parsedResponse.length).toBe(quantity)
 
-    expect(scheduleExecutions).toBeDefined()
-    expect(scheduleExecutions.length).toBe(quantity)
+    for (let i = 0; i < quantity; i++) {
+      expect(dayjs(parsedResponse[i].timestamp).diff(dayjs(timestamp), 'minutes')).toBe(15 * i)
+    }
+  })
+
+  test('should fail to scheduled multiple transactions with no plan balance', async () => {
+    const encodedMethodCall = this.encodedTxSamples.successful
+    const execution = executionFactory(0, this.contracts.tokenAddress, encodedMethodCall, 1000, dayjs().toDate(), 10000, this.consumerAddress)
+    expect(async () => {
+      await this.schedulerSDK.scheduleMany(execution, '*/15 * * * *', 1)
+    }).rejects.toThrow("You don't enough remaining executions.")
   })
 
   test('should return the plans count', async () => {

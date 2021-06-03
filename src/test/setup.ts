@@ -3,7 +3,7 @@ import { ERC677__factory, OneShotSchedule__factory } from '../contracts/types'
 import ERC677Data from '../contracts/ERC677.json'
 import { ethers, Signer, BigNumber } from 'ethers'
 import { JsonRpcProvider } from '@ethersproject/providers'
-import { IPlan } from '../types'
+import { IPlanResponse } from '../types'
 
 const Config = {
   BLOCKCHAIN_HTTP_URL: 'HTTP://127.0.0.1:8545'
@@ -49,9 +49,9 @@ const contractsSetUp = async function (): Promise<{schedulerAddress:string, toke
   return { schedulerAddress: oneShotScheduleContract.address, tokenAddress: erc20.address, tokenAddress677: erc677.address }
 }
 
-const plansSetup = async function (oneShotScheduleContract:string, tokenAddress:string, tokenAddress677:string):Promise<IPlan[]> {
+const plansSetup = async function (oneShotScheduleContract:string, tokenAddress:string, tokenAddress677:string):Promise<IPlanResponse[]> {
   const users = await getUsers()
-  const plans: IPlan[] = [
+  const plans: IPlanResponse[] = [
     { pricePerExecution: BigNumber.from(3), window: BigNumber.from(10000), token: tokenAddress, active: true },
     { pricePerExecution: BigNumber.from(4), window: BigNumber.from(300), token: tokenAddress677, active: true }
   ]

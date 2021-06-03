@@ -1,11 +1,13 @@
 import { BigNumber, BigNumberish, utils } from 'ethers'
-import { IExecution, IExecutionRequest } from './types'
+import { IExecutionRequest } from './types'
 import dayjs from 'dayjs'
 
-const executionId = (e:IExecutionRequest):string => {
+const executionId = (requestor: string, plan: BigNumberish, executionContractAddress: string, encodedTransactionCall: utils.BytesLike, gas: BigNumberish, executionTimestamp: Date, value: BigNumberish):string => {
+  const executionTimestampBigNumber = BigNumber.from(dayjs(executionTimestamp).unix())
+
   const encoder = new utils.AbiCoder()
   const paramTypes = ['address', 'uint256', 'address', 'bytes', 'uint256', 'uint256', 'uint256']
-  const paramValues = [e.requestor, e.plan.toString(), e.to, e.data, e.gas.toString(), e.timestamp.toString(), e.value]
+  const paramValues = [requestor, plan.toString(), executionContractAddress, encodedTransactionCall, gas.toString(), executionTimestampBigNumber.toString(), value.toString()]
   const encodedData = encoder.encode(paramTypes, paramValues)
   return utils.keccak256(encodedData)
 }
@@ -17,20 +19,19 @@ const executionFactory = (
   gas: BigNumberish,
   executionTimestamp: Date,
   value: BigNumberish,
-  from:string
-): IExecution => {
-  const execution:IExecutionRequest = {
-    requestor: from,
-    plan: BigNumber.from(plan),
-    data: encodedTransactionCall,
-    gas: BigNumber.from(gas),
-    timestamp: BigNumber.from(dayjs(executionTimestamp).unix()),
-    value: BigNumber.from(value),
-    to: executionContractAddress
-  }
+  requestor: string
+): IExecutionRequest => {
+  const executionTimestampBigNumber = BigNumber.from(dayjs(executionTimestamp).unix())
+
   return ({
-    id: executionId(execution),
-    ...execution
+    requestor,
+    plan,
+    gas,
+    value,
+    data: encodedTransactionCall,
+    id: executionId(requestor, plan, executionContractAddress, encodedTransactionCall, gas, executionTimestamp, value),
+    timestamp: executionTimestampBigNumber,
+    to: executionContractAddress
   })
 }
 

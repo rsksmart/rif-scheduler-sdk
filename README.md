@@ -34,7 +34,7 @@ This sdk gives you the ability to interact with the `OneShootScheduler` contract
 
 ## Getting Started
 
-rif-scheduler-sdk is built on top of [ethers](https://docs.ethers.io/).
+rif-scheduler-sdk is built on top of [ethers](https://docs.ethers.io/). 
 
 ### Installation
 
@@ -46,7 +46,7 @@ npm i @rsksmart/rif-scheduler-sdk ethers
 
 In order to create an instance of `RifScheduler` you will need an ethers provider or signer.
 
-The provider will only allow `get` operations, such as `getPlan`. In the other hand the signer will allow all operations, such as `purchasePlan`, `schedule`, etc.
+The provider will only allow `read-only` operations, such as `getPlan`. In the other hand the signer will allow all operations, such as `purchasePlan`, `schedule`, etc.
 
 #### with metamask
 
@@ -56,7 +56,7 @@ import { providers } from "ethers";
 
 const provider = new providers.Web3Provider(web3.currentProvider);
 
-// Creates instance with provider, you can execute get operations
+// Creates instance with provider, you can execute read-only operations
 const rifScheduler = new RifScheduler(serviceProviderContractAddress, provider);
 
 const signer = provider.getSigner();
@@ -75,87 +75,20 @@ const url = "http://localhost:8545";
 
 const provider = new providers.JsonRpcProvider(url);
 
-// Creates instance with provider, you can only do get operations
+// Creates instance with provider, you can execute read-only operations
 const rifScheduler = new RifScheduler(serviceProviderContractAddress, provider);
 
 const signer = provider.getSigner();
 
-// Creates instance with signer, you can do any kind of operation
+// Creates instance with signer, you can execute any kind of operation
 const rifScheduler = new RifScheduler(serviceProviderContractAddress, signer);
 ```
 
-### Obtaining a plan
+What you can do with this sdk?
 
-First of all, you need to get a plan from the service provider, which will give you the price per execution, the payment token and the execution window in seconds, among other things.
-
-```javascript
-const rifScheduler = new RifScheduler(serviceProviderContractAddress, provider);
-
-const planIndex = 0;
-const plan = await rifScheduler.getPlan(planIndex);
-
-//  {
-//    pricePerExecution: 10000000000000;
-//    window: 300;
-//    token: 0x...;
-//    active: true;
-//  }
-```
-
-### Purchasing executions
-
-With the information of the previous step, you can approve and purchase executions to be able to schedule them in the future.
-
-```javascript
-const rifScheduler = new RifScheduler(serviceProviderContractAddress, signer);
-
-const executionsQuantity = 2;
-const totalAmount = plan.pricePerExecution.mul(executionsQuantity)
-
-// first you need to approve the totalAmount of tokens
-await rifScheduler.approveToken(plan.token, totalAmount)
-
-const purchaseTransaction = await rifScheduler.purchasePlan(planIndex, executionsQuantity)
-
-// we recommend to wait at least 10 confirmations to be sure that your transaction was processed correctly.
-await purchaseTransaction.wait(12)
-```
-
-### Verifying your remaining executions
-
-It will return how many executions you have left.
-
-You will need to buy some executions if you want to schedule something (see previous step).
-
-This is an optional step, but it is useful because it will give you feedback that everything you have done in the previous steps was correct.
-
-```javascript
-const rifScheduler = new RifScheduler(serviceProviderContractAddress, signer);
-
-const remainingExecutions = await rifScheduler.remainingExecutions(planIndex)
-
-//  2
-```
-
-### Scheduling a single execution
-
-Here you can see how to schedule the execution of any smart contract.
-
-This will be executed by the service provider according to the date and time specified in `executedAt`.
-
-Keep in mind that the execution will occur in a time frame given by the plan window that you purchased earlier.
-
-```javascript
-const rifScheduler = new RifScheduler(serviceProviderContractAddress, signer);
-
-const encodedFunctionCall = new utils.Interface(MyContract.abi).encodeFunctionData('<MyContractFunction>', [arrayOfMyContractFunctionParameters])
-
-const execution = executionFactory(planIndex, myContractAddress, encodedMethodCall, gas, executeAt, BigNumber.from(0), yourAccountAddress)
-const scheduledExecutionTransaction = await rifScheduler.schedule(execution)
-
-// we recommend to wait at least 10 confirmations to be sure tha your transaction was processed ok.
-await scheduledExecutionTransaction.wait(12)
-```
+- [Purchasing Plans](https://developers.rsk.co/rif/scheduler/sdk/purchasing-plans)
+- [Scheduling Executions](https://developers.rsk.co/rif/scheduler/sdk/scheduling)
+- [Canceling](https://developers.rsk.co/rif/scheduler/sdk/canceling)
 
 ## How to contribute
 

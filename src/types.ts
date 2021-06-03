@@ -1,5 +1,5 @@
-import { BigNumber, BytesLike } from 'ethers'
-export interface IPlan {
+import { BigNumber, BigNumberish, BytesLike } from 'ethers'
+export interface IPlanResponse {
   pricePerExecution: BigNumber;
   window: BigNumber;
   token: string;
@@ -7,17 +7,25 @@ export interface IPlan {
 }
 
 export interface IExecutionRequest {
+  id: string;
+  requestor: string;
+  plan: BigNumberish;
+  to: string;
+  data: BytesLike;
+  gas: BigNumberish;
+  timestamp: BigNumberish;
+  value: BigNumberish;
+}
+
+export interface IExecutionResponse {
+  id: string;
   requestor: string;
   plan: BigNumber;
   to: string;
   data: BytesLike;
   gas: BigNumber;
-  timestamp: BigNumber;
+  timestamp: Date;
   value: BigNumber;
-}
-export interface IExecution extends IExecutionRequest {
-  id:string;
-  state?: BigNumber;
 }
 
 export enum ExecutionState {

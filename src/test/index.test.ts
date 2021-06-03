@@ -1,7 +1,7 @@
 import RifScheduler from '../RifScheduler'
 import { BigNumber } from 'ethers'
 import { ContractReceipt } from '@ethersproject/contracts'
-import { ExecutionState, IPlan } from '../types'
+import { ExecutionState, IExecutionResponse, IPlanResponse } from '../types'
 import { getUsers, contractsSetUp, plansSetup, encodedCallSamples } from './setup'
 import ERC677Data from '../contracts/ERC677.json'
 import dayjs from 'dayjs'
@@ -13,7 +13,7 @@ import { executionFactory } from '../executionFactory'
 
 jest.setTimeout(27000)
 
-function equalPlans (p1:IPlan, p2:IPlan):boolean {
+function equalPlans (p1:IPlanResponse, p2:IPlanResponse):boolean {
   return (
     p1.active === p2.active &&
     p1.pricePerExecution.toString() === p2.pricePerExecution.toString() &&
@@ -33,7 +33,7 @@ describe('RifScheduler', function (this: {
       tokenAddress: string;
       tokenAddress677: string;
     },
-    plans: IPlan[],
+    plans: IPlanResponse[],
     encodedTxSamples: { successful: string, failing: string },
     consumerAddress: string
   }) {
@@ -55,22 +55,22 @@ describe('RifScheduler', function (this: {
     await this.schedulerSDK
       .approveToken(
         selectedPlan.token,
-        BigNumber.from(selectedPlan.pricePerExecution)
+        selectedPlan.pricePerExecution
       )
 
     const purchaseResult = await this.schedulerSDK.purchasePlan(0, 1)
     const receipt = await purchaseResult.wait(1)
     expect(hasEvent(receipt, 'ExecutionPurchased')).toBe(true)
-    const remainingExecutions = await this.schedulerSDK.remainingExecutions(BigNumber.from(0))
-    expect(remainingExecutions.toString(10)).toBe('1')
+    const remainingExecutions = await this.schedulerSDK.remainingExecutions(0)
+    expect(remainingExecutions.eq(1)).toBeTruthy()
   })
 
   test('purchase plan ERC667', async () => {
     const selectedPlan = this.plans[1]
     selectedPlan.token = this.contracts.tokenAddress677
     await this.schedulerSDK.purchasePlan(1, 1)
-    const remainingExecutions = await this.schedulerSDK.remainingExecutions(BigNumber.from(1))
-    expect(remainingExecutions.toString(10)).toBe('1')
+    const remainingExecutions = await this.schedulerSDK.remainingExecutions(1)
+    expect(remainingExecutions.eq(1)).toBeTruthy()
   })
 
   test('should be able to estimateGas for a valid tx', async () => {
@@ -97,7 +97,7 @@ describe('RifScheduler', function (this: {
 
   test('should schedule transaction', async () => {
     const planId = 1
-    const remainingExecutionsInitial = await this.schedulerSDK.remainingExecutions(BigNumber.from(planId))
+    const remainingExecutionsInitial = await this.schedulerSDK.remainingExecutions(planId)
     await this.schedulerSDK.purchasePlan(planId, 1)
     const encodedMethodCall = this.encodedTxSamples.successful
     const gas = await this.schedulerSDK.estimateGas(ERC677Data.abi, this.contracts.tokenAddress, 'balanceOf', [this.consumerAddress])
@@ -108,8 +108,8 @@ describe('RifScheduler', function (this: {
     const scheduledExecution = await this.schedulerSDK.schedule(execution)
     const receipt = await scheduledExecution.wait(1)
     expect(hasEvent(receipt, 'ExecutionRequested')).toBe(true)
-    const remainingExecutionsFinal = await this.schedulerSDK.remainingExecutions(BigNumber.from(planId))
-    expect(remainingExecutionsFinal - remainingExecutionsInitial).toBe(0)
+    const remainingExecutionsFinal = await this.schedulerSDK.remainingExecutions(planId)
+    expect(remainingExecutionsFinal.sub(remainingExecutionsInitial).eq(0)).toBeTruthy()
   })
 
   test('should get scheduled transaction state', async () => {
@@ -165,8 +165,8 @@ describe('RifScheduler', function (this: {
     const count = await this.schedulerSDK
       .getPlansCount()
 
-    expect(count).toBeGreaterThan(0)
-    expect(count).toBe(this.plans.length)
+    expect(count.gt(0)).toBeTruthy()
+    expect(count.eq(this.plans.length)).toBeTruthy()
   })
 
   test('should be able to cancel a scheduled tx', async () => {
@@ -205,5 +205,53 @@ describe('RifScheduler', function (this: {
     await expect(this.schedulerSDK.cancelScheduling(execution))
       .rejects
       .toThrow('VM Exception while processing transaction: revert Transaction not scheduled')
+  })
+
+  test('should get scheduled transactions by requester', async () => {
+    const planId = 1
+    const cronExpression = '*/15 * * * *'
+    const quantity = 7
+    await this.schedulerSDK.purchasePlan(planId, quantity)
+
+    const encodedMethodCall = this.encodedTxSamples.successful
+    const gas = await this.schedulerSDK.estimateGas(ERC677Data.abi, this.contracts.tokenAddress, 'balanceOf', [this.consumerAddress])
+    const startTimestamp = cronParser.parseExpression(cronExpression, { startDate: dayjs().add(1, 'day').toDate() }).next().toDate()
+    const valueToTransfer = BigNumber.from(1)
+
+    const execution = executionFactory(planId, this.contracts.tokenAddress, encodedMethodCall, gas!, startTimestamp, valueToTransfer, this.consumerAddress)
+    const scheduleExecutionsTransaction = await this.schedulerSDK.scheduleMany(execution, cronExpression, quantity)
+    await scheduleExecutionsTransaction.wait(1)
+
+    const scheduledTransactionsCount = await this.schedulerSDK.getScheduledTransactionsCount(this.consumerAddress)
+    const pageSize = 2
+
+    let fromIndex = 0
+    let toIndex = 0
+    let pageNumber = 1
+    let hasMore = true
+    const result: IExecutionResponse[] = []
+    while (hasMore) {
+      fromIndex = (pageNumber - 1) * pageSize
+      toIndex = pageNumber * pageSize
+
+      if (scheduledTransactionsCount.lte(toIndex)) {
+        hasMore = false
+        toIndex = scheduledTransactionsCount.toNumber()
+      }
+
+      const scheduledTransactionsPage = await this.schedulerSDK.getScheduledTransactions(this.consumerAddress, fromIndex, toIndex)
+
+      result.push(...scheduledTransactionsPage)
+
+      pageNumber++
+    }
+
+    expect(scheduledTransactionsCount.eq(quantity)).toBeTruthy()
+    expect(result.length).toBe(quantity)
+
+    for (const execution of result) {
+      expect(execution.id).toBeDefined()
+      expect(execution.timestamp >= startTimestamp).toBeTruthy()
+    }
   })
 })

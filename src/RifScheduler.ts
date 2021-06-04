@@ -1,6 +1,6 @@
 import { Provider } from '@ethersproject/providers'
 import { OneShotSchedule } from './contracts/types/OneShotSchedule'
-import { BigNumber, ContractTransaction, Signer, utils, getDefaultProvider, ContractReceipt, Event, BigNumberish } from 'ethers'
+import { BigNumber, ContractTransaction, Signer, utils, getDefaultProvider, ContractReceipt, Event, BigNumberish, constants } from 'ethers'
 import { ExecutionState, IPlanResponse, IExecutionRequest, ScheduledExecution, IExecutionResponse } from './types'
 import dayjs from 'dayjs'
 import * as cronParser from 'cron-parser'
@@ -66,8 +66,7 @@ export default class RifScheduler {
   private async _erc20Purchase (planId: BigNumberish, quantity: BigNumberish, tokenAddress: string, valueToTransfer: BigNumberish): Promise<ContractTransaction> {
     const signerAddress = await this.signer?.getAddress()
     if (signerAddress === undefined) throw new Error('Signer required')
-    const tokenFactory = new ERC20__factory(this.signer)
-    const token = tokenFactory.attach(tokenAddress)
+    const token = ERC20__factory.connect(tokenAddress, this.signer!)
     const allowance = await token.allowance(signerAddress, this.schedulerContract.address)
 
     const hasAllowance = allowance.lt(valueToTransfer)
@@ -80,10 +79,15 @@ export default class RifScheduler {
     if (this.signer === undefined) throw new Error('Signer required')
     const encoder = new utils.AbiCoder()
     const encodedData = encoder.encode(['uint256', 'uint256'], [planId.toString(), quantity.toString()])
-    const tokenFactory = new ERC677__factory(this.signer)
-    const token = tokenFactory.attach(tokenAddress)
-
+    const token = ERC677__factory.connect(tokenAddress, this.signer)
     return await token.transferAndCall(this.schedulerContract.address, valueToTransfer, encodedData)
+  }
+
+  private async _rbtcPurchase (planId: BigNumberish, quantity: BigNumberish, valueToTransfer: BigNumberish): Promise<ContractTransaction> {
+    if (this.signer === undefined) throw new Error('Signer required')
+    const balance = await this.signer.getBalance()
+    if (balance.lt(valueToTransfer)) throw new Error('Not enough balance')
+    return await this.schedulerContract.purchase(planId, quantity, { value: BigNumber.from(valueToTransfer) })
   }
 
   private _supportsTransferAndCall (tokenAddress:string) : boolean {
@@ -94,15 +98,18 @@ export default class RifScheduler {
     if (this.signer === undefined) throw new Error('Signer required')
     const plan = await this.getPlan(planId)
     const purchaseCost = plan.pricePerExecution.mul(quantity)
-    const tokenFactory = new ERC20__factory(this.signer)
-    const token = tokenFactory.attach(plan.token)
-    const signerAddress = await this.signer!.getAddress()
-    const balance = await token.balanceOf(signerAddress)
+    if (plan.token === constants.AddressZero) {
+      return this._rbtcPurchase(planId, quantity, purchaseCost)
+    } else {
+      const token = ERC20__factory.connect(plan.token, this.signer)
+      const signerAddress = await this.signer!.getAddress()
+      const balance = await token.balanceOf(signerAddress)
 
-    if (balance.lt(purchaseCost)) throw new Error('Not enough balance')
-    return (this._supportsTransferAndCall(plan.token))
-      ? this._erc677Purchase(planId, quantity, plan.token, purchaseCost)
-      : this._erc20Purchase(planId, quantity, plan.token, purchaseCost)
+      if (balance.lt(purchaseCost)) throw new Error('Not enough balance')
+      return (this._supportsTransferAndCall(plan.token))
+        ? this._erc677Purchase(planId, quantity, plan.token, purchaseCost)
+        : this._erc20Purchase(planId, quantity, plan.token, purchaseCost)
+    }
   }
 
   async remainingExecutions (planId: BigNumberish): Promise<BigNumber> {

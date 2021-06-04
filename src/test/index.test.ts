@@ -73,6 +73,12 @@ describe('RifScheduler', function (this: {
     expect(remainingExecutions.eq(1)).toBeTruthy()
   })
 
+  test('purchase plan rBTC', async () => {
+    await this.schedulerSDK.purchasePlan(2, 1)
+    const remainingExecutions = await this.schedulerSDK.remainingExecutions(2)
+    expect(remainingExecutions.eq(1)).toBeTruthy()
+  })
+
   test('should be able to estimateGas for a valid tx', async () => {
     const gasResult = await this.schedulerSDK
       .estimateGas(ERC677Data.abi, this.contracts.tokenAddress, 'balanceOf', [this.consumerAddress])

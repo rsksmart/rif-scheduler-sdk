@@ -1,7 +1,7 @@
 // eslint-disable-next-line camelcase
 import { ERC677__factory, OneShotSchedule__factory } from '../contracts/types'
 import ERC677Data from '../contracts/ERC677.json'
-import { ethers, Signer, BigNumber } from 'ethers'
+import { ethers, Signer, BigNumber, constants } from 'ethers'
 import { JsonRpcProvider } from '@ethersproject/providers'
 import { IPlanResponse } from '../types'
 
@@ -53,11 +53,13 @@ const plansSetup = async function (oneShotScheduleContract:string, tokenAddress:
   const users = await getUsers()
   const plans: IPlanResponse[] = [
     { pricePerExecution: BigNumber.from(3), window: BigNumber.from(10000), token: tokenAddress, active: true },
-    { pricePerExecution: BigNumber.from(4), window: BigNumber.from(300), token: tokenAddress677, active: true }
+    { pricePerExecution: BigNumber.from(4), window: BigNumber.from(300), token: tokenAddress677, active: true },
+    { pricePerExecution: BigNumber.from(4), window: BigNumber.from(200), token: constants.AddressZero, active: true }
   ]
   const oneShotScheduleContractProvider = OneShotSchedule__factory.connect(oneShotScheduleContract, users.serviceProvider)
   await oneShotScheduleContractProvider.addPlan(plans[0].pricePerExecution, plans[0].window, tokenAddress)
   await oneShotScheduleContractProvider.addPlan(plans[1].pricePerExecution, plans[1].window, tokenAddress677)
+  await oneShotScheduleContractProvider.addPlan(plans[2].pricePerExecution, plans[2].window, constants.AddressZero)
   return plans
 }
 

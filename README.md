@@ -93,6 +93,7 @@ Install dependencies:
 
 ```
 npm i
+npm run build
 ```
 
 ### Run unit tests

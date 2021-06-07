@@ -1,6 +1,6 @@
 {
   "name": "@rsksmart/rif-scheduler-sdk",
-  "version": "1.0.0",
+  "version": "0.0.1-beta.4",
   "description": "RIF Scheduler SDK",
   "main": "dist/index.js",
   "files": [
@@ -13,8 +13,7 @@
     "test:ci": "npx jest src/*/* --coverage --ci",
     "lint": "npx eslint ./src --ext .json,.js,.ts",
     "lint:fix": "npx eslint ./src --ext .json,.js,.ts --fix",
-    "build": "rimraf ./dist && tsc",
-    "postinstall": "typechain \"src/contracts/*.json\" --target=ethers-v5 --out-dir=src/contracts/types"
+    "build": "rimraf ./dist && typechain \"src/contracts/*.json\" --target=ethers-v5 --out-dir=src/contracts/types && tsc"
   },
   "repository": {
     "type": "git",
@@ -35,7 +34,6 @@
     "@types/jest": "^26.0.23",
     "@typescript-eslint/eslint-plugin": "^4.23.0",
     "@typescript-eslint/parser": "^4.23.0",
-    "dayjs": "^1.10.4",
     "dotenv": "^9.0.2",
     "eslint": "^7.26.0",
     "eslint-config-standard": "^16.0.2",
@@ -54,6 +52,7 @@
   },
   "dependencies": {
     "cron-parser": "^3.5.0",
+    "dayjs": "^1.10.4",
     "ethers": "^5.1.4"
   }
 }

@@ -38,6 +38,12 @@ Install dependencies:
 npm i
 ```
 
+Build to generate types:
+
+```
+npm run build
+```
+
 ### Run unit tests
 
 ```

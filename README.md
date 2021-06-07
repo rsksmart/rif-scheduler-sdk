@@ -39,7 +39,7 @@ This is the official SDK for [`@rsksmart/rif-scheduler-contracts`](https://githu
 
 ## Getting Started
 
-rif-scheduler-sdk is built on top of [ethers](https://docs.ethers.io/). 
+`@rsksmart/rif-scheduler-sdk` is built on top of [`ethers`](https://docs.ethers.io/). 
 
 ### Installation
 

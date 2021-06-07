@@ -190,9 +190,9 @@ export default class RifScheduler {
     return stateResult
   }
 
-  async cancelScheduling (execution: string | IExecutionRequest): Promise<void> {
+  async cancelScheduling (execution: string | IExecutionRequest): Promise<ContractTransaction> {
     const id = typeof execution === 'string' ? execution : execution.id
-    await this.schedulerContract.cancelScheduling(id)
+    return this.schedulerContract.cancelScheduling(id)
   }
 
   async getScheduledTransactionsCount (accountAddress: string): Promise<BigNumber> {

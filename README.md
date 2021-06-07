@@ -96,6 +96,12 @@ npm i
 npm run build
 ```
 
+Build to generate types:
+
+```
+npm run build
+```
+
 ### Run unit tests
 
 ```

@@ -26,11 +26,16 @@
   </a>
 </p>
 
-# rif-scheduler-sdk
+With the RIF Scheduler SDK you can schedule transactions in the RSK network.
 
-This is the official sdk for the [OneShootScheduler](https://github.com/rsksmart/rif-scheduler-contracts) smart contract.
+Features:
+- Query and purchase plans
+- Schedule transactions
+- Schedule recurrent transactions
+- Cancel a scheduling
+- Query transactions scheduled and statuses
 
-This sdk gives you the ability to interact with the `OneShootScheduler` contract in a more simple way.
+This is the official SDK for [`@rsksmart/rif-scheduler-contracts`](https://github.com/rsksmart/rif-scheduler-contracts) smart contract. Use it to interact with the `OneShootScheduler` smart contract in a more simple way.
 
 ## Getting Started
 

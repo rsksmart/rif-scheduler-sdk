@@ -29,6 +29,7 @@
 With the RIF Scheduler SDK you can schedule transactions in the RSK network.
 
 Features:
+
 - Query and purchase plans
 - Schedule transactions
 - Schedule recurrent transactions
@@ -47,13 +48,18 @@ This is the official SDK for [`@rsksmart/rif-scheduler-contracts`](https://githu
 npm i @rsksmart/rif-scheduler-sdk ethers
 ```
 
+Use [`0x0372F6F8C7b2353b546F842Da0C44749664d1203`](https://explorer.testnet.rsk.co/address/0x0372F6F8C7b2353b546F842Da0C44749664d1203) for RSK Testnet
+> You can run your own instance following [this guide](https://developers.rsk.co/rif/scheduler/run/)
+
 ### Initialization
+
+First, you will need an `ethers` `provider` or `signer` instance.
 
 In order to create an instance of `RifScheduler` you will need an ethers provider or signer.
 
-The provider will only allow `read-only` operations, such as `getPlan`. In the other hand the signer will allow all operations, such as `purchasePlan`, `schedule`, etc.
+Using a `provider` will only allow _read-only_ operations, such as `getPlan`. Using a `signer` will allow all operations, such as `purchasePlan`, `schedule`, etc.
 
-#### with metamask
+#### For example, to connect the SDK to Metamask
 
 ```javascript
 import { RifScheduler } from "@rsksmart/rif-scheduler-sdk";
@@ -70,30 +76,12 @@ const signer = provider.getSigner();
 const rifScheduler = new RifScheduler(serviceProviderContractAddress, signer);
 ```
 
-#### with RPC / Ganache
-
-```javascript
-import { RifScheduler } from "@rsksmart/rif-scheduler-sdk";
-import { providers } from "ethers";
-
-const url = "http://localhost:8545";
-
-const provider = new providers.JsonRpcProvider(url);
-
-// Creates instance with provider, you can execute read-only operations
-const rifScheduler = new RifScheduler(serviceProviderContractAddress, provider);
-
-const signer = provider.getSigner();
-
-// Creates instance with signer, you can execute any kind of operation
-const rifScheduler = new RifScheduler(serviceProviderContractAddress, signer);
-```
-
 What you can do with this sdk?
 
-- [Purchasing Plans](https://developers.rsk.co/rif/scheduler/sdk/purchasing-plans)
-- [Scheduling Executions](https://developers.rsk.co/rif/scheduler/sdk/scheduling)
-- [Canceling](https://developers.rsk.co/rif/scheduler/sdk/canceling)
+- [Query plans](https://developers.rsk.co/rif/scheduler/sdk/query-plans)
+- [Purchase one of this plans](https://developers.rsk.co/rif/scheduler/sdk/purchasing-plan)
+- [Schedule a transaction for the next minutes](https://developers.rsk.co/rif/scheduler/sdk/scheduling)
+- [Get status](https://developers.rsk.co/rif/scheduler/sdk/statuses)
 
 ## How to contribute
 

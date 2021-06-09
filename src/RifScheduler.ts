@@ -7,7 +7,6 @@ import * as cronParser from 'cron-parser'
 
 // eslint-disable-next-line camelcase
 import { ERC20__factory, ERC677__factory, OneShotSchedule__factory } from './contracts/types'
-import { JsonFragment } from '@ethersproject/abi'
 import { executionId } from './executionFactory'
 
 type Options = {
@@ -64,9 +63,9 @@ export default class RifScheduler {
   }
 
   private async _erc20Purchase (planId: BigNumberish, quantity: BigNumberish, tokenAddress: string, valueToTransfer: BigNumberish): Promise<ContractTransaction> {
-    const signerAddress = await this.signer?.getAddress()
-    if (signerAddress === undefined) throw new Error('Signer required')
-    const token = ERC20__factory.connect(tokenAddress, this.signer!)
+    if (this.signer === undefined) throw new Error('Signer required')
+    const signerAddress = await this.signer.getAddress()
+    const token = ERC20__factory.connect(tokenAddress, this.signer)
     const allowance = await token.allowance(signerAddress, this.schedulerContract.address)
 
     const hasAllowance = allowance.lt(valueToTransfer)
@@ -90,8 +89,8 @@ export default class RifScheduler {
     return await this.schedulerContract.purchase(planId, quantity, { value: BigNumber.from(valueToTransfer) })
   }
 
-  private _supportsTransferAndCall (tokenAddress:string) : boolean {
-    return this.options?.supportedER677Tokens.includes(tokenAddress) || false
+  supportsApproveAndPurchase (tokenAddress: string): boolean {
+    return this.options?.supportedER677Tokens.map(x => x.toLowerCase()).includes(tokenAddress.toLowerCase()) || false
   }
 
   async purchasePlan (planId: BigNumberish, quantity: BigNumberish): Promise<ContractTransaction> {
@@ -106,7 +105,7 @@ export default class RifScheduler {
       const balance = await token.balanceOf(signerAddress)
 
       if (balance.lt(purchaseCost)) throw new Error('Not enough balance')
-      return (this._supportsTransferAndCall(plan.token))
+      return (this.supportsApproveAndPurchase(plan.token))
         ? this._erc677Purchase(planId, quantity, plan.token, purchaseCost)
         : this._erc20Purchase(planId, quantity, plan.token, purchaseCost)
     }
@@ -120,21 +119,17 @@ export default class RifScheduler {
   }
 
   async estimateGas (
-    abi: string | readonly (string | utils.Fragment | JsonFragment)[],
     contractAddress: string,
-    methodName: string,
-    methodParams: string[]
+    encodedTransactionCall: utils.BytesLike
   ): Promise<BigNumber | undefined> {
     try {
-      const executeMethod = new utils
-        .Interface(abi)
-        .encodeFunctionData(methodName, methodParams)
-
-      return this.provider
+      const gas = await this.provider
         .estimateGas({
           to: contractAddress,
-          data: executeMethod
+          data: encodedTransactionCall
         })
+
+      return gas
     } catch {
       // couldn't estimate the gas
       // it might be an invalid transaction

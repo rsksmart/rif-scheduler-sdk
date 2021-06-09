@@ -3,7 +3,6 @@ import { BigNumber } from 'ethers'
 import { ContractReceipt } from '@ethersproject/contracts'
 import { ExecutionState, IExecutionResponse, IPlanResponse } from '../types'
 import { getUsers, contractsSetUp, plansSetup, encodedCallSamples } from './setup'
-import ERC677Data from '../contracts/ERC677.json'
 import dayjs from 'dayjs'
 import * as cronParser from 'cron-parser'
 import { executionFactory } from '../executionFactory'
@@ -80,23 +79,20 @@ describe('RifScheduler', function (this: {
   })
 
   test('should be able to estimateGas for a valid tx', async () => {
+    const encodedMethodCall = this.encodedTxSamples.successful
+
     const gasResult = await this.schedulerSDK
-      .estimateGas(ERC677Data.abi, this.contracts.tokenAddress, 'balanceOf', [this.consumerAddress])
+      .estimateGas(this.contracts.tokenAddress, encodedMethodCall)
 
     expect(gasResult).toBeDefined()
     expect(gasResult?.gte(BigNumber.from(0))).toBe(true)
   })
 
-  test('should not estimateGas for invalid method', async () => {
-    const gasResult = await this.schedulerSDK
-      .estimateGas(ERC677Data.abi, this.contracts.tokenAddress, 'method-no-exist', [this.consumerAddress])
+  test('should not estimateGas for invalid method/parameter', async () => {
+    const encodedMethodCall = this.encodedTxSamples.failing
 
-    expect(gasResult).not.toBeDefined()
-  })
-
-  test('should not estimateGas for invalid parameter', async () => {
     const gasResult = await this.schedulerSDK
-      .estimateGas(ERC677Data.abi, this.contracts.tokenAddress, 'balanceOf', ['not-address'])
+      .estimateGas(this.contracts.tokenAddress, encodedMethodCall)
 
     expect(gasResult).not.toBeDefined()
   })
@@ -106,7 +102,7 @@ describe('RifScheduler', function (this: {
     const remainingExecutionsInitial = await this.schedulerSDK.remainingExecutions(planId)
     await this.schedulerSDK.purchasePlan(planId, 1)
     const encodedMethodCall = this.encodedTxSamples.successful
-    const gas = await this.schedulerSDK.estimateGas(ERC677Data.abi, this.contracts.tokenAddress, 'balanceOf', [this.consumerAddress])
+    const gas = await this.schedulerSDK.estimateGas(this.contracts.tokenAddress, encodedMethodCall)
     const timestamp = dayjs().add(1, 'day').toDate()
     const valueToTransfer = BigNumber.from(1)
 
@@ -123,7 +119,7 @@ describe('RifScheduler', function (this: {
     await this.schedulerSDK.purchasePlan(planId, 1)
 
     const encodedMethodCall = this.encodedTxSamples.successful
-    const gas = await this.schedulerSDK.estimateGas(ERC677Data.abi, this.contracts.tokenAddress, 'balanceOf', [this.consumerAddress])
+    const gas = await this.schedulerSDK.estimateGas(this.contracts.tokenAddress, encodedMethodCall)
     const timestamp = dayjs().add(1, 'day').toDate()
     const valueToTransfer = BigNumber.from(1)
 
@@ -143,7 +139,7 @@ describe('RifScheduler', function (this: {
     await this.schedulerSDK.purchasePlan(planId, quantity)
 
     const encodedMethodCall = this.encodedTxSamples.successful
-    const gas = await this.schedulerSDK.estimateGas(ERC677Data.abi, this.contracts.tokenAddress, 'balanceOf', [this.consumerAddress])
+    const gas = await this.schedulerSDK.estimateGas(this.contracts.tokenAddress, encodedMethodCall)
     const timestamp = cronParser.parseExpression(cronExpression, { startDate: dayjs().add(1, 'day').toDate() }).next().toDate()
     const valueToTransfer = BigNumber.from(1)
 
@@ -180,7 +176,7 @@ describe('RifScheduler', function (this: {
     await this.schedulerSDK.purchasePlan(planId, 1)
 
     const encodedMethodCall = this.encodedTxSamples.successful
-    const gas = await this.schedulerSDK.estimateGas(ERC677Data.abi, this.contracts.tokenAddress, 'balanceOf', [this.consumerAddress])
+    const gas = await this.schedulerSDK.estimateGas(this.contracts.tokenAddress, encodedMethodCall)
     const timestamp = dayjs().add(1, 'day').toDate()
     const valueToTransfer = BigNumber.from(1)
 
@@ -220,7 +216,7 @@ describe('RifScheduler', function (this: {
     await this.schedulerSDK.purchasePlan(planId, quantity)
 
     const encodedMethodCall = this.encodedTxSamples.successful
-    const gas = await this.schedulerSDK.estimateGas(ERC677Data.abi, this.contracts.tokenAddress, 'balanceOf', [this.consumerAddress])
+    const gas = await this.schedulerSDK.estimateGas(this.contracts.tokenAddress, encodedMethodCall)
     const startTimestamp = cronParser.parseExpression(cronExpression, { startDate: dayjs().add(1, 'day').toDate() }).next().toDate()
     const valueToTransfer = BigNumber.from(1)
 

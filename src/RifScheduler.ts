@@ -1,19 +1,18 @@
 import { Provider } from '@ethersproject/providers'
-import { OneShotSchedule } from './contracts/types/OneShotSchedule'
 import { BigNumber, ContractTransaction, Signer, utils, getDefaultProvider, ContractReceipt, Event, BigNumberish, constants } from 'ethers'
 import { ExecutionState, IPlanResponse, IExecutionRequest, ScheduledExecution, IExecutionResponse } from './types'
 import dayjs from 'dayjs'
 import * as cronParser from 'cron-parser'
 
 // eslint-disable-next-line camelcase
-import { ERC20__factory, ERC677__factory, OneShotSchedule__factory } from './contracts/types'
+import { ERC20__factory, ERC677__factory, RIFScheduler as RIFSchedulerContract, RIFScheduler__factory } from './contracts/types'
 import { executionId } from './executionFactory'
 
 type Options = {
   supportedER677Tokens: string[]
 }
 export default class RifScheduler {
-  schedulerContract!: OneShotSchedule
+  schedulerContract!: RIFSchedulerContract
   provider!: Provider
   signer?: Signer
   options?: Options
@@ -42,7 +41,7 @@ export default class RifScheduler {
       this.provider = currentProviderOrSigner
       this.signer = undefined
     }
-    this.schedulerContract = OneShotSchedule__factory.connect(contractAddress, currentProviderOrSigner)
+    this.schedulerContract = RIFScheduler__factory.connect(contractAddress, currentProviderOrSigner)
     this.options = options
   }
 

@@ -1,5 +1,5 @@
 // eslint-disable-next-line camelcase
-import { ERC677__factory, OneShotSchedule__factory } from '../contracts/types'
+import { ERC677__factory, RIFScheduler__factory } from '../contracts/types'
 import ERC677Data from '../contracts/ERC677.json'
 import { ethers, Signer, BigNumber, constants } from 'ethers'
 import { JsonRpcProvider } from '@ethersproject/providers'
@@ -33,7 +33,7 @@ const getUsers = async function ():Promise<users> {
 const contractsSetUp = async function (): Promise<{schedulerAddress:string, tokenAddress:string, tokenAddress677:string}> {
   ethers.utils.Logger.setLogLevel(ethers.utils.Logger.levels.OFF)
   const users = await getUsers()
-  const oneShotScheduleFactory = new OneShotSchedule__factory(users.admin)
+  const oneShotScheduleFactory = new RIFScheduler__factory(users.admin)
 
   const erc677Factory = new ERC677__factory(users.admin)
   const erc677 = await erc677Factory.deploy(await users.admin.getAddress(), BigNumber.from(100000), 'RIF', 'RIF')
@@ -43,10 +43,9 @@ const contractsSetUp = async function (): Promise<{schedulerAddress:string, toke
   const erc20 = await erc677Factory.deploy(await users.admin.getAddress(), BigNumber.from(100000), 'DOC', 'DOC')
   await erc20.transfer(await users.serviceConsumer.getAddress(), BigNumber.from(50000))
 
-  const oneShotScheduleContract = await oneShotScheduleFactory.deploy()
-  await oneShotScheduleContract.initialize(await users.serviceProvider.getAddress(), await users.payee.getAddress())
+  const schedulerContract = await oneShotScheduleFactory.deploy(await users.serviceProvider.getAddress(), await users.payee.getAddress())
   // ethers.utils.Logger.setLogLevel(ethers.utils.Logger.levels.WARNING)
-  return { schedulerAddress: oneShotScheduleContract.address, tokenAddress: erc20.address, tokenAddress677: erc677.address }
+  return { schedulerAddress: schedulerContract.address, tokenAddress: erc20.address, tokenAddress677: erc677.address }
 }
 
 const plansSetup = async function (oneShotScheduleContract:string, tokenAddress:string, tokenAddress677:string):Promise<IPlanResponse[]> {
@@ -56,7 +55,7 @@ const plansSetup = async function (oneShotScheduleContract:string, tokenAddress:
     { pricePerExecution: BigNumber.from(4), window: BigNumber.from(300), token: tokenAddress677, active: true },
     { pricePerExecution: BigNumber.from(4), window: BigNumber.from(200), token: constants.AddressZero, active: true }
   ]
-  const oneShotScheduleContractProvider = OneShotSchedule__factory.connect(oneShotScheduleContract, users.serviceProvider)
+  const oneShotScheduleContractProvider = RIFScheduler__factory.connect(oneShotScheduleContract, users.serviceProvider)
   await oneShotScheduleContractProvider.addPlan(plans[0].pricePerExecution, plans[0].window, tokenAddress)
   await oneShotScheduleContractProvider.addPlan(plans[1].pricePerExecution, plans[1].window, tokenAddress677)
   await oneShotScheduleContractProvider.addPlan(plans[2].pricePerExecution, plans[2].window, constants.AddressZero)

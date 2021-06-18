@@ -186,7 +186,7 @@ describe('RifScheduler', function (this: {
 
     const initialState = await this.schedulerSDK.getExecutionState(execution)
 
-    await this.schedulerSDK.cancelScheduling(execution)
+    await this.schedulerSDK.cancelExecution(execution)
 
     const stateAfterCancel = await this.schedulerSDK.getExecutionState(execution)
 
@@ -204,7 +204,7 @@ describe('RifScheduler', function (this: {
 
     const execution = executionFactory(planId, this.contracts.tokenAddress, encodedMethodCall, gas!, timestamp, valueToTransfer, this.consumerAddress)
 
-    await expect(this.schedulerSDK.cancelScheduling(execution))
+    await expect(this.schedulerSDK.cancelExecution(execution))
       .rejects
       .toThrow('VM Exception while processing transaction: revert Transaction not scheduled')
   })
@@ -224,7 +224,7 @@ describe('RifScheduler', function (this: {
     const scheduleExecutionsTransaction = await this.schedulerSDK.scheduleMany(execution, cronExpression, quantity)
     await scheduleExecutionsTransaction.wait(1)
 
-    const scheduledTransactionsCount = await this.schedulerSDK.getScheduledTransactionsCount(this.consumerAddress)
+    const scheduledTransactionsCount = await this.schedulerSDK.getScheduledExecutionsCount(this.consumerAddress)
     const pageSize = 2
 
     let fromIndex = 0
@@ -241,7 +241,7 @@ describe('RifScheduler', function (this: {
         toIndex = scheduledTransactionsCount.toNumber()
       }
 
-      const scheduledTransactionsPage = await this.schedulerSDK.getScheduledTransactions(this.consumerAddress, fromIndex, toIndex)
+      const scheduledTransactionsPage = await this.schedulerSDK.getScheduledExecutions(this.consumerAddress, fromIndex, toIndex)
 
       result.push(...scheduledTransactionsPage)
 

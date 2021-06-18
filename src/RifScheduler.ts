@@ -177,14 +177,14 @@ export default class RifScheduler {
     : []
 
   // cancellation
-  cancelScheduling = (execution: string | IExecutionRequest) => this.schedulerContract.cancelScheduling(executionIdFromParam(execution))
+  cancelExecution = (execution: string | IExecutionRequest) => this.schedulerContract.cancelScheduling(executionIdFromParam(execution))
 
   // querying executions
   getExecutionState = (execution: string | IExecutionRequest) => this.schedulerContract.getState(executionIdFromParam(execution))
 
-  getScheduledTransactionsCount = (accountAddress: string) => this.schedulerContract.executionsByRequestorCount(accountAddress)
+  getScheduledExecutionsCount = (accountAddress: string) => this.schedulerContract.executionsByRequestorCount(accountAddress)
 
-  getScheduledTransactions = (accountAddress: string, fromIndex: BigNumberish, toIndex: BigNumberish) =>
+  getScheduledExecutions = (accountAddress: string, fromIndex: BigNumberish, toIndex: BigNumberish) =>
     this.schedulerContract.getExecutionsByRequestor(accountAddress, fromIndex, toIndex)
       .then(executions => executions.map(x => {
         const executionTimestampDate = dayjs.unix(BigNumber.from(x.timestamp).toNumber()).toDate()

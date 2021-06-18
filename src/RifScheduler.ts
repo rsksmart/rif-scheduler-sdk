@@ -1,6 +1,6 @@
 import { Provider } from '@ethersproject/providers'
 import { BigNumber, ContractTransaction, Signer, utils, getDefaultProvider, ContractReceipt, Event, BigNumberish, constants } from 'ethers'
-import { ExecutionState, IPlanResponse, IExecutionRequest, ScheduledExecution, IExecutionResponse } from './types'
+import { IPlanResponse, IExecutionRequest, ScheduledExecution, IExecutionResponse } from './types'
 import dayjs from 'dayjs'
 import * as cronParser from 'cron-parser'
 
@@ -11,6 +11,10 @@ import { executionId } from './executionFactory'
 type Options = {
   supportedER677Tokens: string[]
 }
+
+type ExecutionParam = string | IExecutionRequest
+const executionIdFromParam = (execution: ExecutionParam) => typeof execution === 'string' ? execution : execution.id
+
 export default class RifScheduler {
   schedulerContract!: RIFSchedulerContract
   provider!: Provider
@@ -45,16 +49,15 @@ export default class RifScheduler {
     this.options = options
   }
 
-  async getPlansCount (): Promise<BigNumber> {
-    const count = await this.schedulerContract.plansCount()
-    return count
-  }
+  // plans
+  getPlansCount = () => this.schedulerContract.plansCount()
 
-  async getPlan (index: BigNumberish): Promise<IPlanResponse> {
-    const plan = await this.schedulerContract.plans(index)
-    return plan as IPlanResponse
-  }
+  getPlan = (index: BigNumberish) => this.schedulerContract.plans(index).then(plan => plan as IPlanResponse)
 
+  remainingExecutions = (planId: BigNumberish) => this.signer!.getAddress()
+    .then(signerAddress => this.schedulerContract.remainingExecutions(signerAddress, planId))
+
+  // purchasing
   async approveToken (tokenAddress: string, amount: BigNumberish): Promise<ContractTransaction> {
     const tokenFactory = new ERC20__factory(this.signer)
     const token = tokenFactory.attach(tokenAddress)
@@ -88,9 +91,9 @@ export default class RifScheduler {
     return await this.schedulerContract.purchase(planId, quantity, { value: BigNumber.from(valueToTransfer) })
   }
 
-  supportsApproveAndPurchase (tokenAddress: string): boolean {
-    return this.options?.supportedER677Tokens.map(x => x.toLowerCase()).includes(tokenAddress.toLowerCase()) || false
-  }
+  supportsApproveAndPurchase = (tokenAddress: string) => this.options!.supportedER677Tokens
+    .map(x => x.toLowerCase())
+    .includes(tokenAddress.toLowerCase())
 
   async purchasePlan (planId: BigNumberish, quantity: BigNumberish): Promise<ContractTransaction> {
     if (this.signer === undefined) throw new Error('Signer required')
@@ -110,13 +113,7 @@ export default class RifScheduler {
     }
   }
 
-  async remainingExecutions (planId: BigNumberish): Promise<BigNumber> {
-    if (this.signer === undefined) throw new Error('Signer required')
-    const signerAddress = await this.signer?.getAddress()
-    const remainingExecutions = await this.schedulerContract.remainingExecutions(signerAddress, planId)
-    return remainingExecutions
-  }
-
+  // scheduling
   async estimateGas (
     contractAddress: string,
     encodedTransactionCall: utils.BytesLike
@@ -136,13 +133,16 @@ export default class RifScheduler {
     }
   }
 
-  async schedule (execution: IExecutionRequest): Promise<ContractTransaction> {
-    if (this.signer === undefined) throw new Error('Signer required')
-    return this.schedulerContract.schedule(execution.plan, execution.to, execution.data, execution.gas, execution.timestamp, { value: execution.value })
-  }
+  schedule = (execution: IExecutionRequest) => this.schedulerContract.schedule(
+    execution.plan,
+    execution.to,
+    execution.data,
+    execution.gas,
+    execution.timestamp,
+    { value: execution.value }
+  )
 
   async scheduleMany (execution: IExecutionRequest, cronExpression: string, quantity: BigNumberish): Promise<ContractTransaction> {
-    if (this.signer === undefined) throw new Error('Signer required')
     const remainingExecutions = await this.remainingExecutions(execution.plan)
     if (remainingExecutions.lt(quantity)) throw new Error("You don't enough remaining executions.")
 
@@ -168,48 +168,38 @@ export default class RifScheduler {
     }
     if (requestedExecutions.length !== quantity) throw new Error(`You cannot schedule transactions using ${cronExpression}`)
     const totalValue = BigNumber.from(execution.value).mul(requestedExecutions.length)
-    return this.schedulerContract.batchSchedule(requestedExecutions, { value: totalValue })
+    return await this.schedulerContract.batchSchedule(requestedExecutions, { value: totalValue })
   }
 
-  parseScheduleManyReceipt (receipt: ContractReceipt): ScheduledExecution[] {
-    return (receipt.events)
-      ? receipt.events.filter((ev:Event) => ev.args?.id !== undefined && ev.args?.timestamp !== undefined)
-        .map(ev => (({ id: ev.args!.id, timestamp: dayjs.unix(ev!.args!.timestamp).toDate() }) as ScheduledExecution))
-      : []
-  }
+  parseScheduleManyReceipt = (receipt: ContractReceipt) => (receipt.events)
+    ? receipt.events.filter((ev:Event) => ev.args?.id !== undefined && ev.args?.timestamp !== undefined)
+      .map(ev => (({ id: ev.args!.id, timestamp: dayjs.unix(ev!.args!.timestamp).toDate() }) as ScheduledExecution))
+    : []
 
-  async getExecutionState (execution: string | IExecutionRequest): Promise<ExecutionState> {
-    const id = typeof execution === 'string' ? execution : execution.id
-    const stateResult:ExecutionState = await this.schedulerContract.getState(id)
-    return stateResult
-  }
+  // cancellation
+  cancelScheduling = (execution: string | IExecutionRequest) => this.schedulerContract.cancelScheduling(executionIdFromParam(execution))
 
-  async cancelScheduling (execution: string | IExecutionRequest): Promise<ContractTransaction> {
-    const id = typeof execution === 'string' ? execution : execution.id
-    return this.schedulerContract.cancelScheduling(id)
-  }
+  // querying executions
+  getExecutionState = (execution: string | IExecutionRequest) => this.schedulerContract.getState(executionIdFromParam(execution))
 
-  async getScheduledTransactionsCount (accountAddress: string): Promise<BigNumber> {
-    const count = await this.schedulerContract.executionsByRequestorCount(accountAddress)
-    return count
-  }
+  getScheduledTransactionsCount = (accountAddress: string) => this.schedulerContract.executionsByRequestorCount(accountAddress)
 
-  async getScheduledTransactions (accountAddress: string, fromIndex: BigNumberish, toIndex: BigNumberish): Promise<IExecutionResponse[]> {
-    const executions = await this.schedulerContract.getExecutionsByRequestor(accountAddress, fromIndex, toIndex)
+  getScheduledTransactions = (accountAddress: string, fromIndex: BigNumberish, toIndex: BigNumberish) =>
+    this.schedulerContract.getExecutionsByRequestor(accountAddress, fromIndex, toIndex)
+      .then(executions => executions.map(x => {
+        const executionTimestampDate = dayjs.unix(BigNumber.from(x.timestamp).toNumber()).toDate()
 
-    return executions.map(x => {
-      const executionTimestampDate = dayjs.unix(BigNumber.from(x.timestamp).toNumber()).toDate()
+        const execution: IExecutionResponse = {
+          data: x.data,
+          gas: x.gas,
+          plan: x.plan,
+          requestor: x.requestor,
+          to: x.to,
+          value: x.value,
+          id: executionId(x.requestor, x.plan, x.to, x.data, x.gas, executionTimestampDate, x.value),
+          timestamp: executionTimestampDate
+        }
 
-      return {
-        data: x.data,
-        gas: x.gas,
-        plan: x.plan,
-        requestor: x.requestor,
-        to: x.to,
-        value: x.value,
-        id: executionId(x.requestor, x.plan, x.to, x.data, x.gas, executionTimestampDate, x.value),
-        timestamp: executionTimestampDate
-      }
-    })
-  }
+        return execution
+      }))
 }

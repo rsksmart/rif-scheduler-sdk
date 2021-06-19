@@ -6,6 +6,7 @@ import { getUsers, contractsSetUp, plansSetup, encodedCallSamples } from './setu
 import dayjs from 'dayjs'
 import * as cronParser from 'cron-parser'
 import { executionFactory } from '../executionFactory'
+// eslint-disable-next-line camelcase
 import { ERC20__factory } from '../contracts/types'
 
 /// this tests give a log message: Duplicate definition of Transfer (Transfer(address,address,uint256,bytes), Transfer(address,address,uint256))
@@ -37,7 +38,6 @@ describe('RifScheduler', function (this: {
     encodedTxSamples: { successful: string, failing: string },
     consumerAddress: string
   }) {
-
   beforeEach(async () => {
     const users = await getUsers()
     this.contracts = await contractsSetUp()
@@ -179,7 +179,7 @@ describe('RifScheduler', function (this: {
     let state: ExecutionState
     let execution: IExecutionRequest
 
-    beforeEach(async() => {
+    beforeEach(async () => {
       const planId = 1
       await this.schedulerSDK.purchasePlan(planId, 1)
 

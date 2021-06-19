@@ -36,10 +36,7 @@ export default class RifScheduler {
   ) {
     const currentProviderOrSigner = providerOrSigner || getDefaultProvider()
     if (Signer.isSigner(currentProviderOrSigner)) {
-      if (!currentProviderOrSigner.provider) {
-        throw new Error('Signer must be connected to a provider')
-      }
-      this.provider = currentProviderOrSigner.provider
+      this.provider = currentProviderOrSigner.provider!
       this.signer = currentProviderOrSigner
     } else {
       this.provider = currentProviderOrSigner
@@ -65,9 +62,8 @@ export default class RifScheduler {
   }
 
   private async _erc20Purchase (planId: BigNumberish, quantity: BigNumberish, tokenAddress: string, valueToTransfer: BigNumberish): Promise<ContractTransaction> {
-    if (this.signer === undefined) throw new Error('Signer required')
-    const signerAddress = await this.signer.getAddress()
-    const token = ERC20__factory.connect(tokenAddress, this.signer)
+    const signerAddress = await this.signer!.getAddress()
+    const token = ERC20__factory.connect(tokenAddress, this.signer!)
     const allowance = await token.allowance(signerAddress, this.schedulerContract.address)
 
     const hasAllowance = allowance.lt(valueToTransfer)
@@ -77,16 +73,14 @@ export default class RifScheduler {
   }
 
   private async _erc677Purchase (planId: BigNumberish, quantity: BigNumberish, tokenAddress: string, valueToTransfer: BigNumberish): Promise<ContractTransaction> {
-    if (this.signer === undefined) throw new Error('Signer required')
     const encoder = new utils.AbiCoder()
     const encodedData = encoder.encode(['uint256', 'uint256'], [planId.toString(), quantity.toString()])
-    const token = ERC677__factory.connect(tokenAddress, this.signer)
+    const token = ERC677__factory.connect(tokenAddress, this.signer!)
     return await token.transferAndCall(this.schedulerContract.address, valueToTransfer, encodedData)
   }
 
   private async _rbtcPurchase (planId: BigNumberish, quantity: BigNumberish, valueToTransfer: BigNumberish): Promise<ContractTransaction> {
-    if (this.signer === undefined) throw new Error('Signer required')
-    const balance = await this.signer.getBalance()
+    const balance = await this.signer!.getBalance()
     if (balance.lt(valueToTransfer)) throw new Error('Not enough balance')
     return await this.schedulerContract.purchase(planId, quantity, { value: BigNumber.from(valueToTransfer) })
   }
@@ -96,13 +90,12 @@ export default class RifScheduler {
     .includes(tokenAddress.toLowerCase())
 
   async purchasePlan (planId: BigNumberish, quantity: BigNumberish): Promise<ContractTransaction> {
-    if (this.signer === undefined) throw new Error('Signer required')
     const plan = await this.getPlan(planId)
     const purchaseCost = plan.pricePerExecution.mul(quantity)
     if (plan.token === constants.AddressZero) {
       return this._rbtcPurchase(planId, quantity, purchaseCost)
     } else {
-      const token = ERC20__factory.connect(plan.token, this.signer)
+      const token = ERC20__factory.connect(plan.token, this.signer!)
       const signerAddress = await this.signer!.getAddress()
       const balance = await token.balanceOf(signerAddress)
 
@@ -159,22 +152,17 @@ export default class RifScheduler {
       const encoder = new utils.AbiCoder()
       const encodedExecution = encoder.encode(['uint256', 'address', 'bytes', 'uint256', 'uint256', 'uint256'], [execution.plan, execution.to, execution.data, execution.gas, BigNumber.from(next), execution.value])
       requestedExecutions.push(encodedExecution)
-      try {
-        const nextDate:any = interval.next()
-        next = dayjs(nextDate.value.toDate()).unix()
-      } catch (e) {
-        break
-      }
+      const nextDate: any = interval.next()
+      next = dayjs(nextDate.value.toDate()).unix()
     }
-    if (requestedExecutions.length !== quantity) throw new Error(`You cannot schedule transactions using ${cronExpression}`)
+
     const totalValue = BigNumber.from(execution.value).mul(requestedExecutions.length)
     return await this.schedulerContract.batchSchedule(requestedExecutions, { value: totalValue })
   }
 
-  parseScheduleManyReceipt = (receipt: ContractReceipt) => (receipt.events)
-    ? receipt.events.filter((ev:Event) => ev.args?.id !== undefined && ev.args?.timestamp !== undefined)
+  parseScheduleManyReceipt = (receipt: ContractReceipt) =>
+    receipt.events!.filter((ev:Event) => ev.args!.id !== undefined && ev.args!.timestamp !== undefined)
       .map(ev => (({ id: ev.args!.id, timestamp: dayjs.unix(ev!.args!.timestamp).toDate() }) as ScheduledExecution))
-    : []
 
   // cancellation
   cancelExecution = (execution: string | IExecutionRequest) => this.schedulerContract.cancelScheduling(executionIdFromParam(execution))

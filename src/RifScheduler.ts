@@ -1,11 +1,14 @@
 import { Provider } from '@ethersproject/providers'
+import type { RIFScheduler as RIFSchedulerContract } from '@rsksmart/rif-scheduler-contracts/dist/ethers-contracts'
+// eslint-disable-next-line camelcase
+import { RIFScheduler__factory } from '@rsksmart/rif-scheduler-contracts/dist/ethers-contracts/factories/RIFScheduler__factory'
 import { BigNumber, ContractTransaction, Signer, utils, getDefaultProvider, ContractReceipt, Event, BigNumberish, constants } from 'ethers'
 import { IPlanResponse, IExecutionRequest, ScheduledExecution, IExecutionResponse } from './types'
 import dayjs from 'dayjs'
 import * as cronParser from 'cron-parser'
 
 // eslint-disable-next-line camelcase
-import { ERC20__factory, ERC677__factory, RIFScheduler as RIFSchedulerContract, RIFScheduler__factory } from './contracts/types'
+import { ERC20__factory, ERC677__factory } from './contracts/types'
 import { executionId } from './executionFactory'
 
 type Options = {
@@ -49,7 +52,10 @@ export default class RifScheduler {
   // plans
   getPlansCount = () => this.schedulerContract.plansCount()
 
-  getPlan = (index: BigNumberish) => this.schedulerContract.plans(index).then(plan => plan as IPlanResponse)
+  getPlan = (index: BigNumberish) => {
+    const plan = this.schedulerContract.plans(index)
+    return plan as IPlanResponse
+  }
 
   remainingExecutions = (planId: BigNumberish) => this.signer!.getAddress()
     .then(signerAddress => this.schedulerContract.remainingExecutions(signerAddress, planId))
@@ -172,22 +178,23 @@ export default class RifScheduler {
 
   getScheduledExecutionsCount = (accountAddress: string) => this.schedulerContract.executionsByRequestorCount(accountAddress)
 
-  getScheduledExecutions = (accountAddress: string, fromIndex: BigNumberish, toIndex: BigNumberish) =>
-    this.schedulerContract.getExecutionsByRequestor(accountAddress, fromIndex, toIndex)
-      .then(executions => executions.map(x => {
-        const executionTimestampDate = dayjs.unix(BigNumber.from(x.timestamp).toNumber()).toDate()
+  getScheduledExecutions = async (accountAddress: string, fromIndex: BigNumberish, toIndex: BigNumberish) => {
+    const executions = await this.schedulerContract.getExecutionsByRequestor(accountAddress, fromIndex, toIndex)
+    return executions.map((x:IExecutionResponse) => {
+      const executionTimestampDate = dayjs.unix(BigNumber.from(x.timestamp).toNumber()).toDate()
 
-        const execution: IExecutionResponse = {
-          data: x.data,
-          gas: x.gas,
-          plan: x.plan,
-          requestor: x.requestor,
-          to: x.to,
-          value: x.value,
-          id: executionId(x.requestor, x.plan, x.to, x.data, x.gas, executionTimestampDate, x.value),
-          timestamp: executionTimestampDate
-        }
+      const execution: IExecutionResponse = {
+        data: x.data,
+        gas: x.gas,
+        plan: x.plan,
+        requestor: x.requestor,
+        to: x.to,
+        value: x.value,
+        id: executionId(x.requestor, x.plan, x.to, x.data, x.gas, executionTimestampDate, x.value),
+        timestamp: executionTimestampDate
+      }
 
-        return execution
-      }))
+      return execution
+    })
+  }
 }

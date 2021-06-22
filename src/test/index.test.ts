@@ -189,7 +189,8 @@ describe('RifScheduler', function (this: {
       const valueToTransfer = BigNumber.from(1)
 
       execution = executionFactory(planId, this.contracts.tokenAddress, encodedMethodCall, gas!, timestamp, valueToTransfer, this.consumerAddress)
-      await this.schedulerSDK.schedule(execution).then(tx => tx.wait())
+      const tx = await this.schedulerSDK.schedule(execution)
+      await tx.wait()
     })
 
     test('using execution as parameter', async () => { state = await this.schedulerSDK.getExecutionState(execution) })

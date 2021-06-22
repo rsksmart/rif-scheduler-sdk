@@ -1,5 +1,7 @@
 // eslint-disable-next-line camelcase
-import { ERC677__factory, RIFScheduler__factory } from '../contracts/types'
+import { RIFScheduler__factory } from '@rsksmart/rif-scheduler-contracts/dist/ethers-contracts/factories/RIFScheduler__factory'
+// eslint-disable-next-line camelcase
+import { ERC677__factory } from '../contracts/types'
 import ERC677Data from '../contracts/ERC677.json'
 import { ethers, Signer, BigNumber, constants } from 'ethers'
 import { JsonRpcProvider } from '@ethersproject/providers'

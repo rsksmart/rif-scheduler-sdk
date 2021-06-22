@@ -36,7 +36,7 @@ Features:
 - Cancel a scheduling
 - Query transactions scheduled and statuses
 
-This is the official SDK for [`@rsksmart/rif-scheduler-contracts`](https://github.com/rsksmart/rif-scheduler-contracts) smart contract. Use it to interact with the `OneShootScheduler` smart contract in a more simple way.
+This is the official SDK for [`@rsksmart/rif-scheduler-contracts`](https://github.com/rsksmart/rif-scheduler-contracts) smart contract. Use it to interact with the `RIFScheduler` smart contract in a more simple way.
 
 ## Getting Started
 

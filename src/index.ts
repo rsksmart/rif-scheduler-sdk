@@ -1,4 +1,4 @@
-import RifScheduler from './RifScheduler'
+import RIFScheduler from './RIFScheduler'
 import { executionFactory } from './executionFactory'
 
-export { RifScheduler, executionFactory }
+export { RIFScheduler, executionFactory }

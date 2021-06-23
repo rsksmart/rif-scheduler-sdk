@@ -62,18 +62,18 @@ Using a `provider` will only allow _read-only_ operations, such as `getPlan`. Us
 #### For example, to connect the SDK to Metamask
 
 ```javascript
-import { RifScheduler } from "@rsksmart/rif-scheduler-sdk";
+import { RIFScheduler } from "@rsksmart/rif-scheduler-sdk";
 import { providers } from "ethers";
 
 const provider = new providers.Web3Provider(web3.currentProvider);
 
 // Creates instance with provider, you can execute read-only operations
-const rifScheduler = new RifScheduler(serviceProviderContractAddress, provider);
+const rifScheduler = new RIFScheduler(serviceProviderContractAddress, provider);
 
 const signer = provider.getSigner();
 
 // Creates instance with signer, you can execute any kind of operation
-const rifScheduler = new RifScheduler(serviceProviderContractAddress, signer);
+const rifScheduler = new RIFScheduler(serviceProviderContractAddress, signer);
 ```
 
 What you can do with this sdk?

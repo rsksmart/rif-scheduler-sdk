@@ -91,7 +91,7 @@ export default class RifScheduler {
     return await this.schedulerContract.purchase(planId, quantity, { value: BigNumber.from(valueToTransfer) })
   }
 
-  supportsApproveAndPurchase = (tokenAddress: string) => this.options!.supportedER677Tokens
+  supportsApproveAndPurchase = (tokenAddress: string) => this.options && this.options.supportedER677Tokens
     .map(x => x.toLowerCase())
     .includes(tokenAddress.toLowerCase())
 

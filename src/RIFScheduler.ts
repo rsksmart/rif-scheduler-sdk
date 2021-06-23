@@ -1,15 +1,17 @@
-import { Provider } from '@ethersproject/providers'
+import { utils, constants, providers, getDefaultProvider, Signer, Contract, ContractTransaction, ContractReceipt, Event, BigNumber, BigNumberish } from 'ethers'
 import type { RIFScheduler as RIFSchedulerContract } from '@rsksmart/rif-scheduler-contracts/dist/ethers-contracts'
-// eslint-disable-next-line camelcase
-import { RIFScheduler__factory } from '@rsksmart/rif-scheduler-contracts/dist/ethers-contracts/factories/RIFScheduler__factory'
-import { BigNumber, ContractTransaction, Signer, utils, getDefaultProvider, ContractReceipt, Event, BigNumberish, constants } from 'ethers'
-import { IPlanResponse, IExecutionRequest, ScheduledExecution, IExecutionResponse } from './types'
+import { RIFScheduler__factory as RIFSchedulerFactory } from '@rsksmart/rif-scheduler-contracts/dist/ethers-contracts/factories/RIFScheduler__factory'
 import dayjs from 'dayjs'
 import * as cronParser from 'cron-parser'
-
-// eslint-disable-next-line camelcase
-import { ERC20__factory, ERC677__factory } from './contracts/types'
+import { IPlanResponse, IExecutionRequest, ScheduledExecution, IExecutionResponse } from './types'
 import { executionId } from './executionFactory'
+
+const ERC20Factory = new Contract(constants.AddressZero, [
+  'function balanceOf(address owner) view returns (uint)',
+  'function allowance(address owner, address spender) view returns (uint)',
+  'function transfer(address to, uint amount)',
+  'function approve(address spender, uint amount)'
+]) // wildcard for different tokens. use attach to set address
 
 type Options = {
   supportedER677Tokens: string[]
@@ -18,11 +20,12 @@ type Options = {
 type ExecutionParam = string | IExecutionRequest
 const executionIdFromParam = (execution: ExecutionParam) => typeof execution === 'string' ? execution : execution.id
 
-export default class RifScheduler {
+export class RIFScheduler {
   schedulerContract!: RIFSchedulerContract
-  provider!: Provider
+  provider!: providers.Provider
   signer?: Signer
   options?: Options
+  erc20: Contract
 
   /**
    * Initializes the Safe Core SDK instance.
@@ -34,7 +37,7 @@ export default class RifScheduler {
 
   constructor (
     contractAddress: string,
-    providerOrSigner?: Provider | Signer,
+    providerOrSigner?: providers.Provider | Signer,
     options?: Options
   ) {
     const currentProviderOrSigner = providerOrSigner || getDefaultProvider()
@@ -45,8 +48,10 @@ export default class RifScheduler {
       this.provider = currentProviderOrSigner
       this.signer = undefined
     }
-    this.schedulerContract = RIFScheduler__factory.connect(contractAddress, currentProviderOrSigner)
+    this.schedulerContract = RIFSchedulerFactory.connect(contractAddress, currentProviderOrSigner)
     this.options = options
+
+    this.erc20 = ERC20Factory.connect(currentProviderOrSigner)
   }
 
   // plans
@@ -62,14 +67,13 @@ export default class RifScheduler {
 
   // purchasing
   async approveToken (tokenAddress: string, amount: BigNumberish): Promise<ContractTransaction> {
-    const tokenFactory = new ERC20__factory(this.signer)
-    const token = tokenFactory.attach(tokenAddress)
+    const token = this.erc20.attach(tokenAddress)
     return await token.approve(this.schedulerContract.address, amount)
   }
 
   private async _erc20Purchase (planId: BigNumberish, quantity: BigNumberish, tokenAddress: string, valueToTransfer: BigNumberish): Promise<ContractTransaction> {
     const signerAddress = await this.signer!.getAddress()
-    const token = ERC20__factory.connect(tokenAddress, this.signer!)
+    const token = this.erc20.attach(tokenAddress)
     const allowance = await token.allowance(signerAddress, this.schedulerContract.address)
 
     const hasAllowance = allowance.lt(valueToTransfer)
@@ -81,7 +85,9 @@ export default class RifScheduler {
   private async _erc677Purchase (planId: BigNumberish, quantity: BigNumberish, tokenAddress: string, valueToTransfer: BigNumberish): Promise<ContractTransaction> {
     const encoder = new utils.AbiCoder()
     const encodedData = encoder.encode(['uint256', 'uint256'], [planId.toString(), quantity.toString()])
-    const token = ERC677__factory.connect(tokenAddress, this.signer!)
+    const token = new Contract(tokenAddress, [
+      'function transferAndCall(address to, uint amount, bytes data)'
+    ], this.signer!)
     return await token.transferAndCall(this.schedulerContract.address, valueToTransfer, encodedData)
   }
 
@@ -101,8 +107,8 @@ export default class RifScheduler {
     if (plan.token === constants.AddressZero) {
       return this._rbtcPurchase(planId, quantity, purchaseCost)
     } else {
-      const token = ERC20__factory.connect(plan.token, this.signer!)
       const signerAddress = await this.signer!.getAddress()
+      const token = this.erc20.attach(plan.token)
       const balance = await token.balanceOf(signerAddress)
 
       if (balance.lt(purchaseCost)) throw new Error('Not enough balance')

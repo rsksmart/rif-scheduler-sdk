@@ -8,12 +8,13 @@
   ],
   "scripts": {
     "ganache": "npx ganache-cli",
-    "test": "npx jest",
-    "test:coverage": "npx jest --coverage",
-    "test:ci": "npx jest src/*/* --coverage --ci",
+    "test:prepare": "typechain \"test/contracts/*.json\" --target=ethers-v5 --out-dir=test/contracts/types",
+    "test": "npm run test:prepare && npx jest",
+    "test:coverage": "npm run test:prepare && npx jest --coverage",
+    "test:ci": "npm run test:prepare && npx jest src/*/* --coverage --ci",
     "lint": "npx eslint ./src --ext .json,.js,.ts",
     "lint:fix": "npx eslint ./src --ext .json,.js,.ts --fix",
-    "build": "rimraf ./dist && typechain \"src/contracts/*.json\" --target=ethers-v5 --out-dir=src/contracts/types && tsc"
+    "build": "rimraf ./dist && tsc"
   },
   "repository": {
     "type": "git",

@@ -223,7 +223,7 @@ describe('RifScheduler', function (this: {
     expect(parsedResponse.length).toBe(quantity)
 
     for (let i = 0; i < quantity; i++) {
-      expect(dayjs(parsedResponse[i].timestamp).diff(dayjs(timestamp), 'minutes')).toBe(15 * i)
+      expect(dayjs(parsedResponse[i].timestamp).diff(dayjs(timestamp), 'minutes')).toBe(30 * i)
     }
   })
 

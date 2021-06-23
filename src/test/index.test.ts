@@ -66,14 +66,14 @@ describe('RifScheduler', function (this: {
 
   test('purchase plan ERC20', async () => {
     const selectedPlan = this.plans[0]
-    await this.schedulerSDK
+    const approveTx = await this.schedulerSDK
       .approveToken(
         selectedPlan.token,
         selectedPlan.pricePerExecution
       )
-
+    await approveTx.wait()
     const purchaseResult = await this.schedulerSDK.purchasePlan(0, 1)
-    const receipt = await purchaseResult.wait(1)
+    const receipt = await purchaseResult.wait()
     expect(hasEvent(receipt, 'ExecutionPurchased')).toBe(true)
     const remainingExecutions = await this.schedulerSDK.remainingExecutions(0)
     expect(remainingExecutions.eq(1)).toBeTruthy()
@@ -82,15 +82,15 @@ describe('RifScheduler', function (this: {
   test('cannot purchase plan ERC20 without enough tokens', async () => {
     const selectedPlan = this.plans[0]
 
-    await this.schedulerSDK
+    const approveTx = await this.schedulerSDK
       .approveToken(
         selectedPlan.token,
         selectedPlan.pricePerExecution
       )
-
+    await approveTx.wait()
     const token = await ERC20__factory.connect(this.contracts.tokenAddress, this.schedulerSDK.signer!)
-    await token.transfer(await new providers.JsonRpcProvider().getSigner(7).getAddress(), await token.balanceOf(this.consumerAddress))
-
+    const transferTx = await token.transfer(await new providers.JsonRpcProvider().getSigner(7).getAddress(), await token.balanceOf(this.consumerAddress))
+    await transferTx.wait()
     expect(
       () => this.schedulerSDK.purchasePlan(0, 1)
     ).rejects.toThrow()
@@ -100,8 +100,8 @@ describe('RifScheduler', function (this: {
     const selectedPlan = this.plans[0]
 
     const token = await ERC20__factory.connect(this.contracts.tokenAddress, this.schedulerSDK.signer!)
-    await token.approve(this.schedulerSDK.schedulerContract!.address, selectedPlan.pricePerExecution.sub('1'))
-
+    const approveTx = await token.approve(this.schedulerSDK.schedulerContract!.address, selectedPlan.pricePerExecution.sub('1'))
+    await approveTx.wait()
     expect(
       () => this.schedulerSDK.purchasePlan(0, 1)
     ).rejects.toThrow()
@@ -110,13 +110,15 @@ describe('RifScheduler', function (this: {
   test('purchase plan ERC667', async () => {
     const selectedPlan = this.plans[1]
     selectedPlan.token = this.contracts.tokenAddress677
-    await this.schedulerSDK.purchasePlan(1, 1)
+    const purchaseTx = await this.schedulerSDK.purchasePlan(1, 1)
+    await purchaseTx.wait()
     const remainingExecutions = await this.schedulerSDK.remainingExecutions(1)
     expect(remainingExecutions.eq(1)).toBeTruthy()
   })
 
   test('purchase plan rBTC', async () => {
-    await this.schedulerSDK.purchasePlan(2, 1)
+    const purchaseTx = await this.schedulerSDK.purchasePlan(2, 1)
+    await purchaseTx.wait()
     const remainingExecutions = await this.schedulerSDK.remainingExecutions(2)
     expect(remainingExecutions.eq(1)).toBeTruthy()
   })
@@ -130,8 +132,8 @@ describe('RifScheduler', function (this: {
 
     const schedulerSDK = new RifScheduler(this.contracts.schedulerAddress, consumer, { supportedER677Tokens: [this.contracts.tokenAddress677] })
 
-    await consumer.sendTransaction({ to: await other.getAddress(), value: (await provider.getBalance(await consumer.getAddress())), gasPrice: 0 })
-
+    const tx = await consumer.sendTransaction({ to: await other.getAddress(), value: (await provider.getBalance(await consumer.getAddress())), gasPrice: 0 })
+    await tx.wait()
     expect(
       () => schedulerSDK.purchasePlan(2, 1)
     ).rejects.toThrow()
@@ -161,7 +163,8 @@ describe('RifScheduler', function (this: {
   test('should schedule transaction', async () => {
     const planId = 1
     const remainingExecutionsInitial = await this.schedulerSDK.remainingExecutions(planId)
-    await this.schedulerSDK.purchasePlan(planId, 1)
+    const tx = await this.schedulerSDK.purchasePlan(planId, 1)
+    await tx.wait()
     const encodedMethodCall = this.encodedTxSamples.successful
     const gas = await this.schedulerSDK.estimateGas(this.contracts.tokenAddress, encodedMethodCall)
     const timestamp = dayjs().add(1, 'day').toDate()
@@ -169,7 +172,7 @@ describe('RifScheduler', function (this: {
 
     const execution = executionFactory(planId, this.contracts.tokenAddress, encodedMethodCall, gas!, timestamp, valueToTransfer, this.consumerAddress)
     const scheduledExecution = await this.schedulerSDK.schedule(execution)
-    const receipt = await scheduledExecution.wait(1)
+    const receipt = await scheduledExecution.wait()
     expect(hasEvent(receipt, 'ExecutionRequested')).toBe(true)
     const remainingExecutionsFinal = await this.schedulerSDK.remainingExecutions(planId)
     expect(remainingExecutionsFinal.sub(remainingExecutionsInitial).eq(0)).toBeTruthy()
@@ -181,8 +184,8 @@ describe('RifScheduler', function (this: {
 
     beforeEach(async () => {
       const planId = 1
-      await this.schedulerSDK.purchasePlan(planId, 1)
-
+      const purchaseTx = await this.schedulerSDK.purchasePlan(planId, 1)
+      await purchaseTx.wait()
       const encodedMethodCall = this.encodedTxSamples.successful
       const gas = await this.schedulerSDK.estimateGas(this.contracts.tokenAddress, encodedMethodCall)
       const timestamp = dayjs().add(1, 'day').toDate()
@@ -203,10 +206,10 @@ describe('RifScheduler', function (this: {
 
   test('should get scheduled multiple transactions', async () => {
     const planId = 1
-    const cronExpression = '*/15 * * * *'
+    const cronExpression = '*/30 * * * *'
     const quantity = 5
-    await this.schedulerSDK.purchasePlan(planId, quantity)
-
+    const purchaseTx = await this.schedulerSDK.purchasePlan(planId, quantity)
+    await purchaseTx.wait()
     const encodedMethodCall = this.encodedTxSamples.successful
     const gas = await this.schedulerSDK.estimateGas(this.contracts.tokenAddress, encodedMethodCall)
     const timestamp = cronParser.parseExpression(cronExpression, { startDate: dayjs().add(1, 'day').toDate() }).next().toDate()
@@ -214,7 +217,7 @@ describe('RifScheduler', function (this: {
 
     const execution = executionFactory(planId, this.contracts.tokenAddress, encodedMethodCall, gas!, timestamp, valueToTransfer, this.consumerAddress)
     const scheduleExecutions = await this.schedulerSDK.scheduleMany(execution, cronExpression, quantity)
-    const receipt = await scheduleExecutions.wait(1)
+    const receipt = await scheduleExecutions.wait()
     const parsedResponse = this.schedulerSDK.parseScheduleManyReceipt(receipt)
     expect(hasEvent(receipt, 'ExecutionRequested')).toBe(true)
     expect(parsedResponse.length).toBe(quantity)
@@ -242,8 +245,8 @@ describe('RifScheduler', function (this: {
 
   test('should be able to cancel a scheduled tx', async () => {
     const planId = 1
-    await this.schedulerSDK.purchasePlan(planId, 1)
-
+    const purchaseTx = await this.schedulerSDK.purchasePlan(planId, 1)
+    purchaseTx.wait()
     const encodedMethodCall = this.encodedTxSamples.successful
     const gas = await this.schedulerSDK.estimateGas(this.contracts.tokenAddress, encodedMethodCall)
     const timestamp = dayjs().add(1, 'day').toDate()
@@ -251,7 +254,7 @@ describe('RifScheduler', function (this: {
 
     const execution = executionFactory(planId, this.contracts.tokenAddress, encodedMethodCall, gas!, timestamp, valueToTransfer, this.consumerAddress)
     const scheduledExecution = await this.schedulerSDK.schedule(execution)
-    await scheduledExecution.wait(1)
+    await scheduledExecution.wait()
 
     const initialState = await this.schedulerSDK.getExecutionState(execution)
 
@@ -280,10 +283,10 @@ describe('RifScheduler', function (this: {
 
   test('should get scheduled transactions by requester', async () => {
     const planId = 1
-    const cronExpression = '*/15 * * * *'
+    const cronExpression = '*/30 * * * *'
     const quantity = 7
-    await this.schedulerSDK.purchasePlan(planId, quantity)
-
+    const purchaseTx = await this.schedulerSDK.purchasePlan(planId, quantity)
+    await purchaseTx.wait()
     const encodedMethodCall = this.encodedTxSamples.successful
     const gas = await this.schedulerSDK.estimateGas(this.contracts.tokenAddress, encodedMethodCall)
     const startTimestamp = cronParser.parseExpression(cronExpression, { startDate: dayjs().add(1, 'day').toDate() }).next().toDate()
@@ -291,7 +294,7 @@ describe('RifScheduler', function (this: {
 
     const execution = executionFactory(planId, this.contracts.tokenAddress, encodedMethodCall, gas!, startTimestamp, valueToTransfer, this.consumerAddress)
     const scheduleExecutionsTransaction = await this.schedulerSDK.scheduleMany(execution, cronExpression, quantity)
-    await scheduleExecutionsTransaction.wait(1)
+    await scheduleExecutionsTransaction.wait()
 
     const scheduledTransactionsCount = await this.schedulerSDK.getScheduledExecutionsCount(this.consumerAddress)
     const pageSize = 2

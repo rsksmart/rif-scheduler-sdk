@@ -6,7 +6,7 @@ import * as cronParser from 'cron-parser'
 import { IPlanResponse, IExecutionRequest, ScheduledExecution, IExecutionResponse } from './types'
 import { executionId } from './executionFactory'
 
-const ERC20Factory = new Contract('0x0000000000000000000000000000000000000000', [
+const ERC20Factory = new Contract(constants.AddressZero, [
   'function balanceOf(address owner) view returns (uint)',
   'function allowance(address owner, address spender) view returns (uint)',
   'function transfer(address to, uint amount)',
@@ -20,7 +20,7 @@ type Options = {
 type ExecutionParam = string | IExecutionRequest
 const executionIdFromParam = (execution: ExecutionParam) => typeof execution === 'string' ? execution : execution.id
 
-export default class RifScheduler {
+export class RIFScheduler {
   schedulerContract!: RIFSchedulerContract
   provider!: providers.Provider
   signer?: Signer

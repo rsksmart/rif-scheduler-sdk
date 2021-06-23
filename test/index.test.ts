@@ -1,13 +1,10 @@
-import RifScheduler from '../RifScheduler'
-import { BigNumber, providers } from 'ethers'
-import { ContractReceipt } from '@ethersproject/contracts'
-import { ExecutionState, IExecutionRequest, IExecutionResponse, IPlanResponse } from '../types'
+import { BigNumber, providers, ContractReceipt } from 'ethers'
+import { RIFScheduler, executionFactory, ExecutionState, IExecutionRequest, IExecutionResponse, IPlanResponse } from '../src'
 import { getUsers, contractsSetUp, plansSetup, encodedCallSamples } from './setup'
 import dayjs from 'dayjs'
 import * as cronParser from 'cron-parser'
-import { executionFactory } from '../executionFactory'
 // eslint-disable-next-line camelcase
-import { ERC20__factory } from '../contracts/types'
+import { ERC20__factory } from './contracts/types/factories/ERC20__factory'
 
 /// this tests give a log message: Duplicate definition of Transfer (Transfer(address,address,uint256,bytes), Transfer(address,address,uint256))
 /// don't worry: https://github.com/ethers-io/ethers.js/issues/905
@@ -28,7 +25,7 @@ function hasEvent (receipt:ContractReceipt, eventName:string):boolean {
 }
 
 describe('RifScheduler', function (this: {
-    schedulerSDK: RifScheduler,
+    schedulerSDK: RIFScheduler,
     contracts: {
       schedulerAddress: string;
       tokenAddress: string;
@@ -41,7 +38,7 @@ describe('RifScheduler', function (this: {
   beforeEach(async () => {
     const users = await getUsers()
     this.contracts = await contractsSetUp()
-    this.schedulerSDK = new RifScheduler(this.contracts.schedulerAddress, users.serviceConsumer, { supportedER677Tokens: [this.contracts.tokenAddress677] })
+    this.schedulerSDK = new RIFScheduler(this.contracts.schedulerAddress, users.serviceConsumer, { supportedER677Tokens: [this.contracts.tokenAddress677] })
     this.plans = await plansSetup(this.contracts.schedulerAddress, this.contracts.tokenAddress, this.contracts.tokenAddress677)
     this.encodedTxSamples = await encodedCallSamples()
     this.consumerAddress = await users.serviceConsumer.getAddress()
@@ -49,12 +46,12 @@ describe('RifScheduler', function (this: {
 
   describe('config', () => {
     test('should allow to setup without provider', () => {
-      const otherInstance = new RifScheduler(this.contracts.schedulerAddress, undefined, { supportedER677Tokens: [this.contracts.tokenAddress677] })
+      const otherInstance = new RIFScheduler(this.contracts.schedulerAddress, undefined, { supportedER677Tokens: [this.contracts.tokenAddress677] })
       expect(otherInstance.provider).toBeDefined()
     })
 
     test('should allow provider with no signer', () => {
-      const otherInstance = new RifScheduler(this.contracts.schedulerAddress, new providers.JsonRpcProvider(), { supportedER677Tokens: [this.contracts.tokenAddress677] })
+      const otherInstance = new RIFScheduler(this.contracts.schedulerAddress, new providers.JsonRpcProvider(), { supportedER677Tokens: [this.contracts.tokenAddress677] })
       expect(otherInstance.provider).toBeDefined()
     })
   })
@@ -130,7 +127,7 @@ describe('RifScheduler', function (this: {
     const other = provider.getSigner(7)
     const consumer = provider.getSigner(8)
 
-    const schedulerSDK = new RifScheduler(this.contracts.schedulerAddress, consumer, { supportedER677Tokens: [this.contracts.tokenAddress677] })
+    const schedulerSDK = new RIFScheduler(this.contracts.schedulerAddress, consumer, { supportedER677Tokens: [this.contracts.tokenAddress677] })
 
     const tx = await consumer.sendTransaction({ to: await other.getAddress(), value: (await provider.getBalance(await consumer.getAddress())), gasPrice: 0 })
     await tx.wait()

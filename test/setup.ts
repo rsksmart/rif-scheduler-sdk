@@ -1,18 +1,18 @@
 // eslint-disable-next-line camelcase
 import { RIFScheduler__factory } from '@rsksmart/rif-scheduler-contracts/dist/ethers-contracts/factories/RIFScheduler__factory'
 // eslint-disable-next-line camelcase
-import { ERC677__factory } from '../contracts/types'
-import ERC677Data from '../contracts/ERC677.json'
-import { ethers, Signer, BigNumber, constants } from 'ethers'
+import { ERC677__factory } from './contracts/types/factories/ERC677__factory'
+import ERC677Data from './contracts/ERC677.json'
+import { utils, Signer, BigNumber, constants, providers } from 'ethers'
 import { JsonRpcProvider } from '@ethersproject/providers'
-import { IPlanResponse } from '../types'
+import { IPlanResponse } from '../src'
 
 const Config = {
   BLOCKCHAIN_HTTP_URL: 'HTTP://127.0.0.1:8545'
 }
 
-const getJsonRpcProvider = async function (): Promise<JsonRpcProvider> {
-  return new ethers.providers.JsonRpcProvider(Config.BLOCKCHAIN_HTTP_URL)
+const getJsonRpcProvider = async function (): Promise<providers.JsonRpcProvider> {
+  return new providers.JsonRpcProvider(Config.BLOCKCHAIN_HTTP_URL)
 }
 
 interface users {
@@ -33,7 +33,7 @@ const getUsers = async function ():Promise<users> {
 }
 
 const contractsSetUp = async function (): Promise<{schedulerAddress:string, tokenAddress:string, tokenAddress677:string}> {
-  ethers.utils.Logger.setLogLevel(ethers.utils.Logger.levels.OFF)
+  utils.Logger.setLogLevel(utils.Logger.levels.OFF)
   const users = await getUsers()
   const oneShotScheduleFactory = new RIFScheduler__factory(users.admin)
 
@@ -68,8 +68,8 @@ const encodedCallSamples = async function () : Promise<{successful:string, faili
   // tx call encoded
   const users = await getUsers()
   const consumerAddress = await users.serviceConsumer.getAddress()
-  const successful = new ethers.utils.Interface(ERC677Data.abi).encodeFunctionData('balanceOf', [consumerAddress])
-  const failing = new ethers.utils.Interface(ERC677Data.abi).encodeFunctionData('transferFrom', [ethers.constants.AddressZero, ethers.constants.AddressZero, '400000000'])
+  const successful = new utils.Interface(ERC677Data.abi).encodeFunctionData('balanceOf', [consumerAddress])
+  const failing = new utils.Interface(ERC677Data.abi).encodeFunctionData('transferFrom', [constants.AddressZero, constants.AddressZero, '400000000'])
 
   return {
     successful,

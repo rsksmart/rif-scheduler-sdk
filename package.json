@@ -1,6 +1,6 @@
 {
   "name": "@rsksmart/rif-scheduler-sdk",
-  "version": "0.0.1-beta.5",
+  "version": "1.0.0-beta.1",
   "description": "RIF Scheduler SDK",
   "main": "dist/index.js",
   "files": [
@@ -8,12 +8,13 @@
   ],
   "scripts": {
     "ganache": "npx ganache-cli",
-    "test": "npx jest",
-    "test:coverage": "npx jest --coverage",
-    "test:ci": "npx jest src/*/* --coverage --ci",
+    "test:prepare": "typechain \"test/contracts/*.json\" --target=ethers-v5 --out-dir=test/contracts/types",
+    "test": "npm run test:prepare && npx jest",
+    "test:coverage": "npm run test:prepare && npx jest --coverage",
+    "test:ci": "npm run test:prepare && npx jest test/*.test.ts --coverage --ci",
     "lint": "npx eslint ./src --ext .json,.js,.ts",
     "lint:fix": "npx eslint ./src --ext .json,.js,.ts --fix",
-    "build": "rimraf ./dist && typechain \"src/contracts/*.json\" --target=ethers-v5 --out-dir=src/contracts/types && tsc"
+    "build": "rimraf ./dist && tsc"
   },
   "repository": {
     "type": "git",
@@ -30,7 +31,7 @@
   },
   "homepage": "https://github.com/rsksmart/rif-scheduler-sdk#readme",
   "devDependencies": {
-    "@typechain/ethers-v5": "^7.0.0",
+    "@typechain/ethers-v5": "^7.0.1",
     "@types/jest": "^26.0.23",
     "@typescript-eslint/eslint-plugin": "^4.23.0",
     "@typescript-eslint/parser": "^4.23.0",
@@ -51,8 +52,9 @@
     "typescript": "^4.2.4"
   },
   "dependencies": {
+    "@rsksmart/rif-scheduler-contracts": "^1.0.0-beta.1",
     "cron-parser": "^3.5.0",
     "dayjs": "^1.10.4",
-    "ethers": "^5.1.4"
+    "ethers": "^5.3.1"
   }
 }

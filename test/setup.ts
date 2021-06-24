@@ -1,16 +1,18 @@
 // eslint-disable-next-line camelcase
-import { ERC677__factory, OneShotSchedule__factory } from '../contracts/types'
-import ERC677Data from '../contracts/ERC677.json'
-import { ethers, Signer, BigNumber, constants } from 'ethers'
+import { RIFScheduler__factory } from '@rsksmart/rif-scheduler-contracts/dist/ethers-contracts/factories/RIFScheduler__factory'
+// eslint-disable-next-line camelcase
+import { ERC677__factory } from './contracts/types/factories/ERC677__factory'
+import ERC677Data from './contracts/ERC677.json'
+import { utils, Signer, BigNumber, constants, providers } from 'ethers'
 import { JsonRpcProvider } from '@ethersproject/providers'
-import { IPlanResponse } from '../types'
+import { IPlanResponse } from '../src'
 
 const Config = {
   BLOCKCHAIN_HTTP_URL: 'HTTP://127.0.0.1:8545'
 }
 
-const getJsonRpcProvider = async function (): Promise<JsonRpcProvider> {
-  return new ethers.providers.JsonRpcProvider(Config.BLOCKCHAIN_HTTP_URL)
+const getJsonRpcProvider = async function (): Promise<providers.JsonRpcProvider> {
+  return new providers.JsonRpcProvider(Config.BLOCKCHAIN_HTTP_URL)
 }
 
 interface users {
@@ -31,9 +33,9 @@ const getUsers = async function ():Promise<users> {
 }
 
 const contractsSetUp = async function (): Promise<{schedulerAddress:string, tokenAddress:string, tokenAddress677:string}> {
-  ethers.utils.Logger.setLogLevel(ethers.utils.Logger.levels.OFF)
+  utils.Logger.setLogLevel(utils.Logger.levels.OFF)
   const users = await getUsers()
-  const oneShotScheduleFactory = new OneShotSchedule__factory(users.admin)
+  const oneShotScheduleFactory = new RIFScheduler__factory(users.admin)
 
   const erc677Factory = new ERC677__factory(users.admin)
   const erc677 = await erc677Factory.deploy(await users.admin.getAddress(), BigNumber.from(100000), 'RIF', 'RIF')
@@ -43,10 +45,9 @@ const contractsSetUp = async function (): Promise<{schedulerAddress:string, toke
   const erc20 = await erc677Factory.deploy(await users.admin.getAddress(), BigNumber.from(100000), 'DOC', 'DOC')
   await erc20.transfer(await users.serviceConsumer.getAddress(), BigNumber.from(50000))
 
-  const oneShotScheduleContract = await oneShotScheduleFactory.deploy()
-  await oneShotScheduleContract.initialize(await users.serviceProvider.getAddress(), await users.payee.getAddress())
+  const schedulerContract = await oneShotScheduleFactory.deploy(await users.serviceProvider.getAddress(), await users.payee.getAddress())
   // ethers.utils.Logger.setLogLevel(ethers.utils.Logger.levels.WARNING)
-  return { schedulerAddress: oneShotScheduleContract.address, tokenAddress: erc20.address, tokenAddress677: erc677.address }
+  return { schedulerAddress: schedulerContract.address, tokenAddress: erc20.address, tokenAddress677: erc677.address }
 }
 
 const plansSetup = async function (oneShotScheduleContract:string, tokenAddress:string, tokenAddress677:string):Promise<IPlanResponse[]> {
@@ -56,7 +57,7 @@ const plansSetup = async function (oneShotScheduleContract:string, tokenAddress:
     { pricePerExecution: BigNumber.from(4), window: BigNumber.from(300), token: tokenAddress677, active: true },
     { pricePerExecution: BigNumber.from(4), window: BigNumber.from(200), token: constants.AddressZero, active: true }
   ]
-  const oneShotScheduleContractProvider = OneShotSchedule__factory.connect(oneShotScheduleContract, users.serviceProvider)
+  const oneShotScheduleContractProvider = RIFScheduler__factory.connect(oneShotScheduleContract, users.serviceProvider)
   await oneShotScheduleContractProvider.addPlan(plans[0].pricePerExecution, plans[0].window, tokenAddress)
   await oneShotScheduleContractProvider.addPlan(plans[1].pricePerExecution, plans[1].window, tokenAddress677)
   await oneShotScheduleContractProvider.addPlan(plans[2].pricePerExecution, plans[2].window, constants.AddressZero)
@@ -67,8 +68,8 @@ const encodedCallSamples = async function () : Promise<{successful:string, faili
   // tx call encoded
   const users = await getUsers()
   const consumerAddress = await users.serviceConsumer.getAddress()
-  const successful = new ethers.utils.Interface(ERC677Data.abi).encodeFunctionData('balanceOf', [consumerAddress])
-  const failing = new ethers.utils.Interface(ERC677Data.abi).encodeFunctionData('transferFrom', [ethers.constants.AddressZero, ethers.constants.AddressZero, '400000000'])
+  const successful = new utils.Interface(ERC677Data.abi).encodeFunctionData('balanceOf', [consumerAddress])
+  const failing = new utils.Interface(ERC677Data.abi).encodeFunctionData('transferFrom', [constants.AddressZero, constants.AddressZero, '400000000'])
 
   return {
     successful,

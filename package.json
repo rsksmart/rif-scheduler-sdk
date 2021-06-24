@@ -11,7 +11,7 @@
     "test:prepare": "typechain \"test/contracts/*.json\" --target=ethers-v5 --out-dir=test/contracts/types",
     "test": "npm run test:prepare && npx jest",
     "test:coverage": "npm run test:prepare && npx jest --coverage",
-    "test:ci": "npm run test:prepare && npx jest src/*/* --coverage --ci",
+    "test:ci": "npm run test:prepare && npx jest test/*.test.ts --coverage --ci",
     "lint": "npx eslint ./src --ext .json,.js,.ts",
     "lint:fix": "npx eslint ./src --ext .json,.js,.ts --fix",
     "build": "rimraf ./dist && tsc"

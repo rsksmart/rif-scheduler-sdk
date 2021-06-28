@@ -1,5 +1,5 @@
 import { utils, constants, providers, getDefaultProvider, Signer, Contract, ContractTransaction, ContractReceipt, Event, BigNumber, BigNumberish } from 'ethers'
-import type { RIFScheduler as RIFSchedulerContract } from '@rsksmart/rif-scheduler-contracts/dist/ethers-contracts'
+import type { RIFScheduler as RIFSchedulerContract } from '@rsksmart/rif-scheduler-contracts/types/ethers-contracts'
 import { RIFScheduler__factory as RIFSchedulerFactory } from '@rsksmart/rif-scheduler-contracts/dist/ethers-contracts/factories/RIFScheduler__factory'
 import dayjs from 'dayjs'
 import * as cronParser from 'cron-parser'
@@ -55,14 +55,14 @@ export class RIFScheduler {
   }
 
   // plans
-  getPlansCount = () => this.schedulerContract.plansCount()
+  getPlansCount = ():Promise<BigNumber> => this.schedulerContract.plansCount()
 
-  getPlan = (index: BigNumberish) => {
-    const plan = this.schedulerContract.plans(index)
-    return plan as IPlanResponse
+  getPlan = async (index: BigNumberish): Promise<IPlanResponse> => {
+    const plan = await this.schedulerContract.plans(index)
+    return { pricePerExecution: plan.pricePerExecution, window: plan.window, token: plan.token, active: plan.active } as IPlanResponse
   }
 
-  remainingExecutions = (planId: BigNumberish) => this.signer!.getAddress()
+  remainingExecutions = (planId: BigNumberish):Promise<BigNumber> => this.signer!.getAddress()
     .then(signerAddress => this.schedulerContract.remainingExecutions(signerAddress, planId))
 
   // purchasing
@@ -97,9 +97,9 @@ export class RIFScheduler {
     return await this.schedulerContract.purchase(planId, quantity, { value: BigNumber.from(valueToTransfer) })
   }
 
-  supportsApproveAndPurchase = (tokenAddress: string) => this.options && this.options.supportedER677Tokens
-    .map(x => x.toLowerCase())
-    .includes(tokenAddress.toLowerCase())
+  supportsApproveAndPurchase = (tokenAddress: string):boolean =>
+    this.options?.supportedER677Tokens !== undefined &&
+    this.options.supportedER677Tokens.map(x => x.toLowerCase()).includes(tokenAddress.toLowerCase())
 
   async purchasePlan (planId: BigNumberish, quantity: BigNumberish): Promise<ContractTransaction> {
     const plan = await this.getPlan(planId)
@@ -186,7 +186,7 @@ export class RIFScheduler {
 
   getScheduledExecutions = async (accountAddress: string, fromIndex: BigNumberish, toIndex: BigNumberish) => {
     const executions = await this.schedulerContract.getExecutionsByRequestor(accountAddress, fromIndex, toIndex)
-    return executions.map((x:IExecutionResponse) => {
+    return executions.map(x => {
       const executionTimestampDate = dayjs.unix(BigNumber.from(x.timestamp).toNumber()).toDate()
 
       const execution: IExecutionResponse = {

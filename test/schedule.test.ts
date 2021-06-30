@@ -37,11 +37,12 @@ describe('SDK - schedule', function (this: {
     const tx = await this.schedulerSDK.purchasePlan(planId, 1)
     await tx.wait()
     const encodedMethodCall = this.encodedTxSamples.successful
-    const gas = await this.schedulerSDK.estimateGas(this.contracts.tokenAddress, encodedMethodCall)
+    // TODO: review this code
+    // const gas = await this.schedulerSDK.estimateGas(this.contracts.tokenAddress, encodedMethodCall)
     const timestamp = dayjs(await BlockchainDate.now(this.schedulerSDK.provider)).add(1, 'day').toDate()
     const valueToTransfer = BigNumber.from(1)
 
-    const execution = executionFactory(planId, this.contracts.tokenAddress, encodedMethodCall, gas!, timestamp, valueToTransfer, this.consumerAddress)
+    const execution = executionFactory(planId, this.contracts.tokenAddress, encodedMethodCall, timestamp, valueToTransfer, this.consumerAddress)
     const scheduledExecution = await this.schedulerSDK.schedule(execution)
     const receipt = await scheduledExecution.wait()
     expect(hasEvent(receipt, 'ExecutionRequested')).toBe(true)
@@ -56,11 +57,12 @@ describe('SDK - schedule', function (this: {
     const purchaseTx = await this.schedulerSDK.purchasePlan(planId, quantity)
     await purchaseTx.wait()
     const encodedMethodCall = this.encodedTxSamples.successful
-    const gas = await this.schedulerSDK.estimateGas(this.contracts.tokenAddress, encodedMethodCall)
+    // TODO: review this code
+    // const gas = await this.schedulerSDK.estimateGas(this.contracts.tokenAddress, encodedMethodCall)
     const timestamp = cronParser.parseExpression(cronExpression, { startDate: dayjs(await BlockchainDate.now(this.schedulerSDK.provider)).add(1, 'day').toDate() }).next().toDate()
     const valueToTransfer = BigNumber.from(1)
 
-    const execution = executionFactory(planId, this.contracts.tokenAddress, encodedMethodCall, gas!, timestamp, valueToTransfer, this.consumerAddress)
+    const execution = executionFactory(planId, this.contracts.tokenAddress, encodedMethodCall, timestamp, valueToTransfer, this.consumerAddress)
     const scheduleExecutions = await this.schedulerSDK.scheduleMany(execution, cronExpression, quantity)
     const receipt = await scheduleExecutions.wait()
     const parsedResponse = this.schedulerSDK.parseScheduleManyReceipt(receipt)
@@ -74,7 +76,10 @@ describe('SDK - schedule', function (this: {
 
   test('should fail to schedule multiple executions with no plan balance', async () => {
     const encodedMethodCall = this.encodedTxSamples.successful
-    const execution = executionFactory(0, this.contracts.tokenAddress, encodedMethodCall, 1000, dayjs(await BlockchainDate.now(this.schedulerSDK.provider)).toDate(), 10000, this.consumerAddress)
+
+    const value = 10000
+
+    const execution = executionFactory(0, this.contracts.tokenAddress, encodedMethodCall, dayjs(await BlockchainDate.now(this.schedulerSDK.provider)).toDate(), value, this.consumerAddress)
     expect(async () => {
       await this.schedulerSDK.scheduleMany(execution, '*/15 * * * *', 1)
     }).rejects.toThrow("You don't enough remaining executions.")

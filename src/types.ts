@@ -12,7 +12,6 @@ export interface IExecutionRequest {
   plan: BigNumberish;
   to: string;
   data: BytesLike;
-  gas: BigNumberish;
   timestamp: BigNumberish;
   value: BigNumberish;
 }
@@ -23,7 +22,6 @@ export interface IExecutionResponse {
   plan: BigNumber;
   to: string;
   data: BytesLike;
-  gas: BigNumber;
   timestamp: Date;
   value: BigNumber;
 }

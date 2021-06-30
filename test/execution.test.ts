@@ -39,11 +39,12 @@ describe('SDK - execution', function (this: {
       const purchaseTx = await this.schedulerSDK.purchasePlan(planId, 1)
       await purchaseTx.wait()
       const encodedMethodCall = this.encodedTxSamples.successful
-      const gas = await this.schedulerSDK.estimateGas(this.contracts.tokenAddress, encodedMethodCall)
+      // TODO: review this code
+      // const gas = await this.schedulerSDK.estimateGas(this.contracts.tokenAddress, encodedMethodCall)
       const timestamp = dayjs(await BlockchainDate.now(this.schedulerSDK.provider)).add(1, 'day').toDate()
       const valueToTransfer = BigNumber.from(1)
 
-      execution = executionFactory(planId, this.contracts.tokenAddress, encodedMethodCall, gas!, timestamp, valueToTransfer, this.consumerAddress)
+      execution = executionFactory(planId, this.contracts.tokenAddress, encodedMethodCall, timestamp, valueToTransfer, this.consumerAddress)
       const tx = await this.schedulerSDK.schedule(execution)
       await tx.wait()
     })
@@ -63,11 +64,12 @@ describe('SDK - execution', function (this: {
     const purchaseTx = await this.schedulerSDK.purchasePlan(planId, quantity)
     await purchaseTx.wait()
     const encodedMethodCall = this.encodedTxSamples.successful
-    const gas = await this.schedulerSDK.estimateGas(this.contracts.tokenAddress, encodedMethodCall)
+    // TODO: review this code
+    // const gas = await this.schedulerSDK.estimateGas(this.contracts.tokenAddress, encodedMethodCall)
     const startTimestamp = cronParser.parseExpression(cronExpression, { startDate: dayjs(await BlockchainDate.now(this.schedulerSDK.provider)).add(1, 'day').toDate() }).next().toDate()
     const valueToTransfer = BigNumber.from(1)
 
-    const execution = executionFactory(planId, this.contracts.tokenAddress, encodedMethodCall, gas!, startTimestamp, valueToTransfer, this.consumerAddress)
+    const execution = executionFactory(planId, this.contracts.tokenAddress, encodedMethodCall, startTimestamp, valueToTransfer, this.consumerAddress)
     const scheduleExecutionsTransaction = await this.schedulerSDK.scheduleMany(execution, cronExpression, quantity)
     await scheduleExecutionsTransaction.wait()
 

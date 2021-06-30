@@ -1,7 +1,6 @@
-// eslint-disable-next-line camelcase
-import { RIFScheduler__factory } from '@rsksmart/rif-scheduler-contracts/dist/ethers-contracts/factories/RIFScheduler__factory'
-// eslint-disable-next-line camelcase
-import { ERC677__factory } from './contracts/types/factories/ERC677__factory'
+import { RIFScheduler__factory as RIFSchedulerFactory } from '@rsksmart/rif-scheduler-contracts/dist/ethers-contracts/factories/RIFScheduler__factory'
+import type { RIFScheduler as RIFSchedulerContract } from '@rsksmart/rif-scheduler-contracts/types/ethers-contracts'
+import { ERC677__factory as ERC677Factory } from './contracts/types/factories/ERC677__factory'
 import ERC677Data from './contracts/ERC677.json'
 import { utils, Signer, BigNumber, constants, providers } from 'ethers'
 import { IPlanResponse } from '../src'
@@ -35,9 +34,9 @@ const getUsers = async function ():Promise<users> {
 const contractsSetUp = async function (): Promise<{schedulerAddress:string, tokenAddress:string, tokenAddress677:string}> {
   utils.Logger.setLogLevel(utils.Logger.levels.OFF)
   const users = await getUsers()
-  const rifSchedulerFactory = new RIFScheduler__factory(users.admin)
+  const rifSchedulerFactory = new RIFSchedulerFactory(users.admin)
 
-  const erc677Factory = new ERC677__factory(users.admin)
+  const erc677Factory = new ERC677Factory(users.admin)
   const erc677 = await erc677Factory.deploy(await users.admin.getAddress(), BigNumber.from(100000), 'RIF', 'RIF')
   await erc677.transfer(await users.serviceConsumer.getAddress(), BigNumber.from(50000))
 
@@ -50,6 +49,7 @@ const contractsSetUp = async function (): Promise<{schedulerAddress:string, toke
     await users.payee.getAddress(),
     Config.MINIMUM_TIME_BEFORE_EXECUTION
   )
+
   return { schedulerAddress: schedulerContract.address, tokenAddress: erc20.address, tokenAddress677: erc677.address }
 }
 
@@ -60,10 +60,12 @@ const plansSetup = async function (oneShotScheduleContract:string, tokenAddress:
     { pricePerExecution: BigNumber.from(4), window: BigNumber.from(300), token: tokenAddress677, active: true },
     { pricePerExecution: BigNumber.from(4), window: BigNumber.from(200), token: constants.AddressZero, active: true }
   ]
-  const oneShotScheduleContractProvider = RIFScheduler__factory.connect(oneShotScheduleContract, users.serviceProvider)
-  await oneShotScheduleContractProvider.addPlan(plans[0].pricePerExecution, plans[0].window, tokenAddress)
-  await oneShotScheduleContractProvider.addPlan(plans[1].pricePerExecution, plans[1].window, tokenAddress677)
-  await oneShotScheduleContractProvider.addPlan(plans[2].pricePerExecution, plans[2].window, constants.AddressZero)
+  const initialGasLimit = 10000
+
+  const oneShotScheduleContractProvider: RIFSchedulerContract = RIFSchedulerFactory.connect(oneShotScheduleContract, users.serviceProvider)
+  await oneShotScheduleContractProvider.addPlan(plans[0].pricePerExecution, plans[0].window, initialGasLimit, tokenAddress)
+  await oneShotScheduleContractProvider.addPlan(plans[1].pricePerExecution, plans[1].window, initialGasLimit * 10, tokenAddress677)
+  await oneShotScheduleContractProvider.addPlan(plans[2].pricePerExecution, plans[2].window, initialGasLimit * 100, constants.AddressZero)
   return plans
 }
 

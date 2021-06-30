@@ -35,11 +35,12 @@ describe('SDK - cancel/refund', function (this: {
     const purchaseTx = await this.schedulerSDK.purchasePlan(planId, 1)
     purchaseTx.wait()
     const encodedMethodCall = this.encodedTxSamples.successful
-    const gas = await this.schedulerSDK.estimateGas(this.contracts.tokenAddress, encodedMethodCall)
+    // TODO: review this code
+    // const gas = await this.schedulerSDK.estimateGas(this.contracts.tokenAddress, encodedMethodCall)
     const timestamp = dayjs(await BlockchainDate.now(this.schedulerSDK.provider)).add(1, 'day').toDate()
     const valueToTransfer = BigNumber.from(1)
 
-    const execution = executionFactory(planId, this.contracts.tokenAddress, encodedMethodCall, gas!, timestamp, valueToTransfer, this.consumerAddress)
+    const execution = executionFactory(planId, this.contracts.tokenAddress, encodedMethodCall, timestamp, valueToTransfer, this.consumerAddress)
     const scheduledExecution = await this.schedulerSDK.schedule(execution)
     await scheduledExecution.wait()
 
@@ -59,11 +60,13 @@ describe('SDK - cancel/refund', function (this: {
     const purchaseTx = await this.schedulerSDK.purchasePlan(planId, 1)
     purchaseTx.wait()
     const encodedMethodCall = this.encodedTxSamples.successful
-    const gas = await this.schedulerSDK.estimateGas(this.contracts.tokenAddress, encodedMethodCall)
+
+    // TODO: review this code
+    // const gas = await this.schedulerSDK.estimateGas(this.contracts.tokenAddress, encodedMethodCall)
     const timestamp = dayjs(await BlockchainDate.now(this.schedulerSDK.provider)).add(EXTRA_MINUTES, 'minutes').toDate()
     const valueToTransfer = BigNumber.from(1)
 
-    const execution = executionFactory(planId, this.contracts.tokenAddress, encodedMethodCall, gas!, timestamp, valueToTransfer, this.consumerAddress)
+    const execution = executionFactory(planId, this.contracts.tokenAddress, encodedMethodCall, timestamp, valueToTransfer, this.consumerAddress)
     const scheduledExecution = await this.schedulerSDK.schedule(execution)
     await scheduledExecution.wait()
 
@@ -87,11 +90,13 @@ describe('SDK - cancel/refund', function (this: {
     const purchaseTx = await this.schedulerSDK.purchasePlan(planId, 1)
     purchaseTx.wait()
     const encodedMethodCall = this.encodedTxSamples.successful
-    const gas = await this.schedulerSDK.estimateGas(this.contracts.tokenAddress, encodedMethodCall)
+
+    // TODO: review this code
+    // const gas = await this.schedulerSDK.estimateGas(this.contracts.tokenAddress, encodedMethodCall)
     const timestamp = dayjs(await BlockchainDate.now(this.schedulerSDK.provider)).add(1, 'day').toDate()
     const valueToTransfer = BigNumber.from(1)
 
-    const execution = executionFactory(planId, this.contracts.tokenAddress, encodedMethodCall, gas!, timestamp, valueToTransfer, this.consumerAddress)
+    const execution = executionFactory(planId, this.contracts.tokenAddress, encodedMethodCall, timestamp, valueToTransfer, this.consumerAddress)
     const scheduledExecution = await this.schedulerSDK.schedule(execution)
     await scheduledExecution.wait()
 
@@ -104,11 +109,10 @@ describe('SDK - cancel/refund', function (this: {
     const planId = 1
 
     const encodedMethodCall = this.encodedTxSamples.successful
-    const gas = 100
     const timestamp = dayjs(await BlockchainDate.now(this.schedulerSDK.provider)).add(1, 'day').toDate()
     const valueToTransfer = BigNumber.from(1)
 
-    const execution = executionFactory(planId, this.contracts.tokenAddress, encodedMethodCall, gas!, timestamp, valueToTransfer, this.consumerAddress)
+    const execution = executionFactory(planId, this.contracts.tokenAddress, encodedMethodCall, timestamp, valueToTransfer, this.consumerAddress)
 
     await expect(this.schedulerSDK.cancelExecution(execution))
       .rejects

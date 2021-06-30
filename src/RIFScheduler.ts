@@ -139,7 +139,6 @@ export class RIFScheduler {
     execution.plan,
     execution.to,
     execution.data,
-    execution.gas,
     execution.timestamp,
     { value: execution.value }
   )
@@ -159,8 +158,14 @@ export class RIFScheduler {
 
     for (let i = 0; i < quantity; i++) {
       const encoder = new utils.AbiCoder()
-      const encodedExecution = encoder.encode(['uint256', 'address', 'bytes', 'uint256', 'uint256', 'uint256'], [execution.plan, execution.to, execution.data, execution.gas, BigNumber.from(next), execution.value])
+
+      const encodedExecution = encoder.encode(
+        ['uint256', 'address', 'bytes', 'uint256', 'uint256'],
+        [execution.plan, execution.to, execution.data, BigNumber.from(next), execution.value]
+      )
+
       requestedExecutions.push(encodedExecution)
+
       const nextDate: any = interval.next()
       next = dayjs(nextDate.value.toDate()).unix()
     }
@@ -188,12 +193,11 @@ export class RIFScheduler {
 
       const execution: IExecutionResponse = {
         data: x.data,
-        gas: x.gas,
         plan: x.plan,
         requestor: x.requestor,
         to: x.to,
         value: x.value,
-        id: executionId(x.requestor, x.plan, x.to, x.data, x.gas, executionTimestampDate, x.value),
+        id: executionId(x.requestor, x.plan, x.to, x.data, executionTimestampDate, x.value),
         timestamp: executionTimestampDate
       }
 

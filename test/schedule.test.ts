@@ -4,7 +4,7 @@ import { getUsers, contractsSetUp, plansSetup, encodedCallSamples } from './setu
 import dayjs from 'dayjs'
 import * as cronParser from 'cron-parser'
 import hasEvent from './hasEvent'
-import { BlockchainDate } from './BlockchainDate'
+import { timeLatest } from './timeLatest'
 
 /// this tests give a log message: Duplicate definition of Transfer (Transfer(address,address,uint256,bytes), Transfer(address,address,uint256))
 /// don't worry: https://github.com/ethers-io/ethers.js/issues/905
@@ -39,7 +39,7 @@ describe('SDK - schedule', function (this: {
     const encodedMethodCall = this.encodedTxSamples.successful
     // TODO: review this code
     // const gas = await this.schedulerSDK.estimateGas(this.contracts.tokenAddress, encodedMethodCall)
-    const timestamp = dayjs(await BlockchainDate.now(this.schedulerSDK.provider)).add(1, 'day').toDate()
+    const timestamp = dayjs(await timeLatest()).add(1, 'day').toDate()
     const valueToTransfer = BigNumber.from(1)
 
     const execution = executionFactory(planId, this.contracts.tokenAddress, encodedMethodCall, timestamp, valueToTransfer, this.consumerAddress)
@@ -59,7 +59,7 @@ describe('SDK - schedule', function (this: {
     const encodedMethodCall = this.encodedTxSamples.successful
     // TODO: review this code
     // const gas = await this.schedulerSDK.estimateGas(this.contracts.tokenAddress, encodedMethodCall)
-    const timestamp = cronParser.parseExpression(cronExpression, { startDate: dayjs(await BlockchainDate.now(this.schedulerSDK.provider)).add(1, 'day').toDate() }).next().toDate()
+    const timestamp = cronParser.parseExpression(cronExpression, { startDate: dayjs(await timeLatest()).add(1, 'day').toDate() }).next().toDate()
     const valueToTransfer = BigNumber.from(1)
 
     const execution = executionFactory(planId, this.contracts.tokenAddress, encodedMethodCall, timestamp, valueToTransfer, this.consumerAddress)
@@ -79,7 +79,7 @@ describe('SDK - schedule', function (this: {
 
     const value = 10000
 
-    const execution = executionFactory(0, this.contracts.tokenAddress, encodedMethodCall, dayjs(await BlockchainDate.now(this.schedulerSDK.provider)).toDate(), value, this.consumerAddress)
+    const execution = executionFactory(0, this.contracts.tokenAddress, encodedMethodCall, dayjs(await timeLatest()).toDate(), value, this.consumerAddress)
     expect(async () => {
       await this.schedulerSDK.scheduleMany(execution, '*/15 * * * *', 1)
     }).rejects.toThrow("You don't enough remaining executions.")

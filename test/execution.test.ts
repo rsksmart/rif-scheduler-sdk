@@ -3,7 +3,7 @@ import { RIFScheduler, executionFactory, ExecutionState, IExecutionRequest, IExe
 import { getUsers, contractsSetUp, plansSetup, encodedCallSamples } from './setup'
 import dayjs from 'dayjs'
 import * as cronParser from 'cron-parser'
-import { BlockchainDate } from './BlockchainDate'
+import { timeLatest } from './timeLatest'
 
 /// this tests give a log message: Duplicate definition of Transfer (Transfer(address,address,uint256,bytes), Transfer(address,address,uint256))
 /// don't worry: https://github.com/ethers-io/ethers.js/issues/905
@@ -41,7 +41,7 @@ describe('SDK - execution', function (this: {
       const encodedMethodCall = this.encodedTxSamples.successful
       // TODO: review this code
       // const gas = await this.schedulerSDK.estimateGas(this.contracts.tokenAddress, encodedMethodCall)
-      const timestamp = dayjs(await BlockchainDate.now(this.schedulerSDK.provider)).add(1, 'day').toDate()
+      const timestamp = dayjs(await timeLatest()).add(1, 'day').toDate()
       const valueToTransfer = BigNumber.from(1)
 
       execution = executionFactory(planId, this.contracts.tokenAddress, encodedMethodCall, timestamp, valueToTransfer, this.consumerAddress)
@@ -66,7 +66,7 @@ describe('SDK - execution', function (this: {
     const encodedMethodCall = this.encodedTxSamples.successful
     // TODO: review this code
     // const gas = await this.schedulerSDK.estimateGas(this.contracts.tokenAddress, encodedMethodCall)
-    const startTimestamp = cronParser.parseExpression(cronExpression, { startDate: dayjs(await BlockchainDate.now(this.schedulerSDK.provider)).add(1, 'day').toDate() }).next().toDate()
+    const startTimestamp = cronParser.parseExpression(cronExpression, { startDate: dayjs(await timeLatest()).add(1, 'day').toDate() }).next().toDate()
     const valueToTransfer = BigNumber.from(1)
 
     const execution = executionFactory(planId, this.contracts.tokenAddress, encodedMethodCall, startTimestamp, valueToTransfer, this.consumerAddress)

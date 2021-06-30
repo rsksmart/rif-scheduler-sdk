@@ -3,7 +3,7 @@ import { RIFScheduler, executionFactory, ExecutionState, IPlanResponse } from '.
 import { getUsers, contractsSetUp, plansSetup, encodedCallSamples } from './setup'
 import dayjs from 'dayjs'
 import { time } from '@openzeppelin/test-helpers'
-import { BlockchainDate } from './BlockchainDate'
+import { timeLatest } from './timeLatest'
 
 /// this tests give a log message: Duplicate definition of Transfer (Transfer(address,address,uint256,bytes), Transfer(address,address,uint256))
 /// don't worry: https://github.com/ethers-io/ethers.js/issues/905
@@ -37,7 +37,7 @@ describe('SDK - cancel/refund', function (this: {
     const encodedMethodCall = this.encodedTxSamples.successful
     // TODO: review this code
     // const gas = await this.schedulerSDK.estimateGas(this.contracts.tokenAddress, encodedMethodCall)
-    const timestamp = dayjs(await BlockchainDate.now(this.schedulerSDK.provider)).add(1, 'day').toDate()
+    const timestamp = dayjs(await timeLatest()).add(1, 'day').toDate()
     const valueToTransfer = BigNumber.from(1)
 
     const execution = executionFactory(planId, this.contracts.tokenAddress, encodedMethodCall, timestamp, valueToTransfer, this.consumerAddress)
@@ -63,16 +63,14 @@ describe('SDK - cancel/refund', function (this: {
 
     // TODO: review this code
     // const gas = await this.schedulerSDK.estimateGas(this.contracts.tokenAddress, encodedMethodCall)
-    const timestamp = dayjs(await BlockchainDate.now(this.schedulerSDK.provider)).add(EXTRA_MINUTES, 'minutes').toDate()
+    const timestamp = dayjs(await timeLatest()).add(EXTRA_MINUTES, 'minutes').toDate()
     const valueToTransfer = BigNumber.from(1)
 
     const execution = executionFactory(planId, this.contracts.tokenAddress, encodedMethodCall, timestamp, valueToTransfer, this.consumerAddress)
     const scheduledExecution = await this.schedulerSDK.schedule(execution)
     await scheduledExecution.wait()
 
-    const diffInMinutes = EXTRA_MINUTES * 2
-
-    await time.increase(diffInMinutes * 60)
+    await time.increaseTo(dayjs(timestamp).add(2, 'days').unix())
     await time.advanceBlock()
 
     const initialState = await this.schedulerSDK.getExecutionState(execution)
@@ -93,7 +91,7 @@ describe('SDK - cancel/refund', function (this: {
 
     // TODO: review this code
     // const gas = await this.schedulerSDK.estimateGas(this.contracts.tokenAddress, encodedMethodCall)
-    const timestamp = dayjs(await BlockchainDate.now(this.schedulerSDK.provider)).add(1, 'day').toDate()
+    const timestamp = dayjs(await timeLatest()).add(1, 'day').toDate()
     const valueToTransfer = BigNumber.from(1)
 
     const execution = executionFactory(planId, this.contracts.tokenAddress, encodedMethodCall, timestamp, valueToTransfer, this.consumerAddress)
@@ -109,7 +107,7 @@ describe('SDK - cancel/refund', function (this: {
     const planId = 1
 
     const encodedMethodCall = this.encodedTxSamples.successful
-    const timestamp = dayjs(await BlockchainDate.now(this.schedulerSDK.provider)).add(1, 'day').toDate()
+    const timestamp = dayjs(await timeLatest()).add(1, 'day').toDate()
     const valueToTransfer = BigNumber.from(1)
 
     const execution = executionFactory(planId, this.contracts.tokenAddress, encodedMethodCall, timestamp, valueToTransfer, this.consumerAddress)

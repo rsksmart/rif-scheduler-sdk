@@ -54,7 +54,6 @@ export class RIFScheduler {
     this.erc20 = ERC20Factory.connect(currentProviderOrSigner)
   }
 
-  // plans
   getPlansCount = ():Promise<BigNumber> => this.schedulerContract.plansCount()
 
   getPlan = async (index: BigNumberish): Promise<IPlanResponse> => {
@@ -65,7 +64,6 @@ export class RIFScheduler {
   remainingExecutions = (planId: BigNumberish):Promise<BigNumber> => this.signer!.getAddress()
     .then(signerAddress => this.schedulerContract.remainingExecutions(signerAddress, planId))
 
-  // purchasing
   async approveToken (tokenAddress: string, amount: BigNumberish): Promise<ContractTransaction> {
     const token = this.erc20.attach(tokenAddress)
     return await token.approve(this.schedulerContract.address, amount)
@@ -118,7 +116,6 @@ export class RIFScheduler {
     }
   }
 
-  // scheduling
   async estimateGas (
     contractAddress: string,
     encodedTransactionCall: utils.BytesLike
@@ -176,10 +173,10 @@ export class RIFScheduler {
     receipt.events!.filter((ev:Event) => ev.args!.id !== undefined && ev.args!.timestamp !== undefined)
       .map(ev => (({ id: ev.args!.id, timestamp: dayjs.unix(ev!.args!.timestamp).toDate() }) as ScheduledExecution))
 
-  // cancellation
   cancelExecution = (execution: string | IExecutionRequest) => this.schedulerContract.cancelScheduling(executionIdFromParam(execution))
 
-  // querying executions
+  requestExecutionRefund = (execution: string | IExecutionRequest) => this.schedulerContract.requestExecutionRefund(executionIdFromParam(execution))
+
   getExecutionState = (execution: string | IExecutionRequest) => this.schedulerContract.getState(executionIdFromParam(execution))
 
   getScheduledExecutionsCount = (accountAddress: string) => this.schedulerContract.executionsByRequestorCount(accountAddress)

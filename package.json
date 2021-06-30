@@ -9,9 +9,9 @@
   "scripts": {
     "ganache": "npx ganache-cli",
     "test:prepare": "typechain \"test/contracts/*.json\" --target=ethers-v5 --out-dir=test/contracts/types",
-    "test": "npm run test:prepare && npx jest",
-    "test:coverage": "npm run test:prepare && npx jest --coverage",
-    "test:ci": "npm run test:prepare && npx jest test/*.test.ts --coverage --ci",
+    "test": "npm run test:prepare && npx jest  --runInBand",
+    "test:coverage": "npm run test:prepare && npx jest  --runInBand --coverage",
+    "test:ci": "npm run test:prepare && npx jest  --runInBand test/*.test.ts --coverage --ci",
     "lint": "npx eslint ./src --ext .json,.js,.ts",
     "lint:fix": "npx eslint ./src --ext .json,.js,.ts --fix",
     "build": "rimraf ./dist && tsc"
@@ -52,7 +52,7 @@
     "typescript": "^4.2.4"
   },
   "dependencies": {
-    "@rsksmart/rif-scheduler-contracts": "^1.0.0-beta.1",
+    "@openzeppelin/test-helpers": "^0.5.11",
     "cron-parser": "^3.5.0",
     "dayjs": "^1.10.4",
     "ethers": "^5.3.1"

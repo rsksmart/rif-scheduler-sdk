@@ -2,7 +2,6 @@ import { BigNumber } from 'ethers'
 import { RIFScheduler, executionFactory, IPlanResponse } from '../src'
 import { getUsers, contractsSetUp, plansSetup, encodedCallSamples } from './setup'
 import dayjs from 'dayjs'
-import * as cronParser from 'cron-parser'
 import hasEvent from './hasEvent'
 import { timeLatest } from './timeLatest'
 
@@ -52,17 +51,18 @@ describe('SDK - schedule', function (this: {
 
   test('should schedule multiple executions', async () => {
     const planId = 1
-    const cronExpression = '*/30 * * * *'
+    const cronExpression = '0 0 */1 * *'
     const quantity = 5
     const purchaseTx = await this.schedulerSDK.purchasePlan(planId, quantity)
     await purchaseTx.wait()
     const encodedMethodCall = this.encodedTxSamples.successful
     // TODO: review this code
     // const gas = await this.schedulerSDK.estimateGas(this.contracts.tokenAddress, encodedMethodCall)
-    const timestamp = cronParser.parseExpression(cronExpression, { startDate: dayjs(await timeLatest()).add(1, 'day').toDate() }).next().toDate()
+    const today = await timeLatest()
+    const startTimestamp = dayjs(new Date(today.getFullYear(), today.getMonth(), today.getDate())).add(1, 'day').toDate()
     const valueToTransfer = BigNumber.from(1)
 
-    const execution = executionFactory(planId, this.contracts.tokenAddress, encodedMethodCall, timestamp, valueToTransfer, this.consumerAddress)
+    const execution = executionFactory(planId, this.contracts.tokenAddress, encodedMethodCall, startTimestamp, valueToTransfer, this.consumerAddress)
     const scheduleExecutions = await this.schedulerSDK.scheduleMany(execution, cronExpression, quantity)
     const receipt = await scheduleExecutions.wait()
     const parsedResponse = this.schedulerSDK.parseScheduleManyReceipt(receipt)
@@ -70,7 +70,7 @@ describe('SDK - schedule', function (this: {
     expect(parsedResponse.length).toBe(quantity)
 
     for (let i = 0; i < quantity; i++) {
-      expect(dayjs(parsedResponse[i].timestamp).diff(dayjs(timestamp), 'minutes')).toBe(30 * i)
+      expect(dayjs(parsedResponse[i].timestamp).diff(dayjs(startTimestamp), 'days')).toBe(i)
     }
   })
 

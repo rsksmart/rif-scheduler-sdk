@@ -2,7 +2,6 @@ import { BigNumber } from 'ethers'
 import { RIFScheduler, executionFactory, ExecutionState, IExecutionRequest, IExecutionResponse, IPlanResponse } from '../src'
 import { getUsers, contractsSetUp, plansSetup, encodedCallSamples } from './setup'
 import dayjs from 'dayjs'
-import * as cronParser from 'cron-parser'
 import { timeLatest } from './timeLatest'
 
 /// this tests give a log message: Duplicate definition of Transfer (Transfer(address,address,uint256,bytes), Transfer(address,address,uint256))
@@ -59,14 +58,15 @@ describe('SDK - execution', function (this: {
 
   test('should get scheduled executions by requester', async () => {
     const planId = 1
-    const cronExpression = '*/30 * * * *'
+    const cronExpression = '0 0 */1 * *'
     const quantity = 7
     const purchaseTx = await this.schedulerSDK.purchasePlan(planId, quantity)
     await purchaseTx.wait()
     const encodedMethodCall = this.encodedTxSamples.successful
     // TODO: review this code
     // const gas = await this.schedulerSDK.estimateGas(this.contracts.tokenAddress, encodedMethodCall)
-    const startTimestamp = cronParser.parseExpression(cronExpression, { startDate: dayjs(await timeLatest()).add(1, 'day').toDate() }).next().toDate()
+    const today = await timeLatest()
+    const startTimestamp = dayjs(new Date(today.getFullYear(), today.getMonth(), today.getDate())).add(1, 'day').toDate()
     const valueToTransfer = BigNumber.from(1)
 
     const execution = executionFactory(planId, this.contracts.tokenAddress, encodedMethodCall, startTimestamp, valueToTransfer, this.consumerAddress)

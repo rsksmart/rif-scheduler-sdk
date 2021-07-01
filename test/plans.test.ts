@@ -112,13 +112,21 @@ describe('SDK - Plans', function (this: {
 
     const schedulerSDK = new RIFScheduler(this.contracts.schedulerAddress, consumer, { supportedER677Tokens: [this.contracts.tokenAddress677] })
 
-    const tx = await consumer.sendTransaction({ to: await other.getAddress(), value: (await provider.getBalance(await consumer.getAddress())), gasPrice: 0 })
+    const tx = await consumer.sendTransaction({
+      to: await other.getAddress(),
+      value: (await provider.getBalance(await consumer.getAddress())),
+      gasPrice: 0
+    })
     await tx.wait()
-    expect(
+    await expect(
       () => schedulerSDK.purchasePlan(2, 1)
     ).rejects.toThrow()
 
-    await other.sendTransaction({ to: await consumer.getAddress(), value: (await provider.getBalance(await other.getAddress())), gasPrice: 0 })
+    await other.sendTransaction({
+      to: await consumer.getAddress(),
+      value: (await provider.getBalance(await other.getAddress())),
+      gasPrice: 0
+    })
   })
 
   test('should return the plans count', async () => {

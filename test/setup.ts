@@ -55,17 +55,17 @@ const contractsSetUp = async function (): Promise<{schedulerAddress:string, toke
 
 const plansSetup = async function (oneShotScheduleContract:string, tokenAddress:string, tokenAddress677:string):Promise<IPlanResponse[]> {
   const users = await getUsers()
+  const initialGasLimit = BigNumber.from(10000)
   const plans: IPlanResponse[] = [
-    { pricePerExecution: BigNumber.from(3), window: BigNumber.from(10000), token: tokenAddress, active: true },
-    { pricePerExecution: BigNumber.from(4), window: BigNumber.from(300), token: tokenAddress677, active: true },
-    { pricePerExecution: BigNumber.from(4), window: BigNumber.from(200), token: constants.AddressZero, active: true }
+    { pricePerExecution: BigNumber.from(3), window: BigNumber.from(10000), token: tokenAddress, active: true, gasLimit: initialGasLimit },
+    { pricePerExecution: BigNumber.from(4), window: BigNumber.from(300), token: tokenAddress677, active: true, gasLimit: initialGasLimit.mul(10) },
+    { pricePerExecution: BigNumber.from(4), window: BigNumber.from(200), token: constants.AddressZero, active: true, gasLimit: initialGasLimit.mul(100) }
   ]
-  const initialGasLimit = 10000
 
   const oneShotScheduleContractProvider: RIFSchedulerContract = RIFSchedulerFactory.connect(oneShotScheduleContract, users.serviceProvider)
-  await oneShotScheduleContractProvider.addPlan(plans[0].pricePerExecution, plans[0].window, initialGasLimit, tokenAddress)
-  await oneShotScheduleContractProvider.addPlan(plans[1].pricePerExecution, plans[1].window, initialGasLimit * 10, tokenAddress677)
-  await oneShotScheduleContractProvider.addPlan(plans[2].pricePerExecution, plans[2].window, initialGasLimit * 100, constants.AddressZero)
+  await oneShotScheduleContractProvider.addPlan(plans[0].pricePerExecution, plans[0].window, plans[0].gasLimit, tokenAddress)
+  await oneShotScheduleContractProvider.addPlan(plans[1].pricePerExecution, plans[1].window, plans[1].gasLimit, tokenAddress677)
+  await oneShotScheduleContractProvider.addPlan(plans[2].pricePerExecution, plans[2].window, plans[2].gasLimit, constants.AddressZero)
   return plans
 }
 

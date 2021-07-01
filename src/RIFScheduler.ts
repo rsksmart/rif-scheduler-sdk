@@ -58,7 +58,7 @@ export class RIFScheduler {
 
   getPlan = async (index: BigNumberish): Promise<IPlanResponse> => {
     const plan = await this.schedulerContract.plans(index)
-    return { pricePerExecution: plan.pricePerExecution, window: plan.window, token: plan.token, active: plan.active } as IPlanResponse
+    return plan as IPlanResponse
   }
 
   remainingExecutions = (planId: BigNumberish):Promise<BigNumber> => this.signer!.getAddress()

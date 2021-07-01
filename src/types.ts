@@ -4,6 +4,7 @@ export interface IPlanResponse {
   window: BigNumber;
   token: string;
   active: boolean;
+  gasLimit: BigNumber;
 }
 
 export interface IExecutionRequest {

@@ -26,16 +26,80 @@
   </a>
 </p>
 
+With the RIF Scheduler SDK you can schedule transactions in the RSK network.
+
+Features:
+
+- Query and purchase plans
+- Schedule transactions
+- Schedule recurrent transactions
+- Cancel a scheduling
+- Query transactions scheduled and statuses
+
+This is the official SDK for [`@rsksmart/rif-scheduler-contracts`](https://github.com/rsksmart/rif-scheduler-contracts) smart contract. Use it to interact with the `RIFScheduler` smart contract in a more simple way.
+
+## Getting Started
+
+`@rsksmart/rif-scheduler-sdk` is built on top of [`ethers`](https://docs.ethers.io/). 
+
+### Installation
+
 ```
-npm i @rsksmart/rif-scheduler-sdk
+npm i @rsksmart/rif-scheduler-sdk ethers
 ```
 
-## Run for development
+Use [`0x0372F6F8C7b2353b546F842Da0C44749664d1203`](https://explorer.testnet.rsk.co/address/0x0372F6F8C7b2353b546F842Da0C44749664d1203) for RSK Testnet
+> You can run your own instance following [this guide](https://developers.rsk.co/rif/scheduler/run/)
+
+### Initialization
+
+First, you will need an `ethers` `provider` or `signer` instance.
+
+In order to create an instance of `RifScheduler` you will need an ethers provider or signer.
+
+Using a `provider` will only allow _read-only_ operations, such as `getPlan`. Using a `signer` will allow all operations, such as `purchasePlan`, `schedule`, etc.
+
+#### For example, to connect the SDK to Metamask
+
+```javascript
+import { RIFScheduler } from "@rsksmart/rif-scheduler-sdk";
+import { providers } from "ethers";
+
+const provider = new providers.Web3Provider(web3.currentProvider);
+
+// Creates instance with provider, you can execute read-only operations
+const rifScheduler = new RIFScheduler(serviceProviderContractAddress, provider);
+
+const signer = provider.getSigner();
+
+// Creates instance with signer, you can execute any kind of operation
+const rifScheduler = new RIFScheduler(serviceProviderContractAddress, signer);
+```
+
+What you can do with this sdk?
+
+- [Query plans](https://developers.rsk.co/rif/scheduler/sdk/query-plans)
+- [Purchase one of this plans](https://developers.rsk.co/rif/scheduler/sdk/purchasing-plan)
+- [Schedule a transaction for the next minutes](https://developers.rsk.co/rif/scheduler/sdk/scheduling)
+- [Get status](https://developers.rsk.co/rif/scheduler/sdk/statuses)
+
+## How to contribute
+
+If you want to contribute, here are the steps you need to run this project locally.
+
+### Run for development
 
 Install dependencies:
 
 ```
 npm i
+npm run build
+```
+
+Build to generate types:
+
+```
+npm run build
 ```
 
 ### Run unit tests

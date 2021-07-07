@@ -1,26 +1,36 @@
 import { BigNumber, BigNumberish, utils } from 'ethers'
-import { IExecution } from './types'
+import { IExecutionRequest } from './types'
 import dayjs from 'dayjs'
+
+const executionId = (requestor: string, plan: BigNumberish, executionContractAddress: string, encodedTransactionCall: utils.BytesLike, executionTimestamp: Date, value: BigNumberish):string => {
+  const executionTimestampBigNumber = BigNumber.from(dayjs(executionTimestamp).unix())
+
+  const encoder = new utils.AbiCoder()
+  const paramTypes = ['address', 'uint256', 'address', 'bytes', 'uint256', 'uint256']
+  const paramValues = [requestor, plan.toString(), executionContractAddress, encodedTransactionCall, executionTimestampBigNumber.toString(), value.toString()]
+  const encodedData = encoder.encode(paramTypes, paramValues)
+  return utils.keccak256(encodedData)
+}
 
 const executionFactory = (
   plan: BigNumberish,
   executionContractAddress: string,
   encodedTransactionCall: utils.BytesLike,
-  gas: BigNumberish,
   executionTimestamp: Date,
   value: BigNumberish,
-  from:string
-): IExecution => {
-  const execution:IExecution = {
-    requestor: from,
-    plan: BigNumber.from(plan),
+  requestor: string
+): IExecutionRequest => {
+  const executionTimestampBigNumber = BigNumber.from(dayjs(executionTimestamp).unix())
+
+  return ({
+    requestor,
+    plan,
+    value,
     data: encodedTransactionCall,
-    gas: BigNumber.from(gas),
-    timestamp: BigNumber.from(dayjs(executionTimestamp).unix()),
-    value: BigNumber.from(value),
+    id: executionId(requestor, plan, executionContractAddress, encodedTransactionCall, executionTimestamp, value),
+    timestamp: executionTimestampBigNumber,
     to: executionContractAddress
-  }
-  return execution
+  })
 }
 
-export default executionFactory
+export { executionFactory, executionId }

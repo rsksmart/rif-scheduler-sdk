@@ -1,32 +1,47 @@
-import { BigNumber, BytesLike } from 'ethers'
-export interface IPlan {
+import { BigNumber, BigNumberish, BytesLike } from 'ethers'
+export interface IPlanResponse {
   pricePerExecution: BigNumber;
   window: BigNumber;
   token: string;
   active: boolean;
+  gasLimit: BigNumber;
 }
 
-export interface IExecution {
+export interface IExecutionRequest {
+  id: string;
+  requestor: string;
+  plan: BigNumberish;
+  to: string;
+  data: BytesLike;
+  timestamp: BigNumberish;
+  value: BigNumberish;
+}
+
+export interface IExecutionResponse {
+  id: string;
   requestor: string;
   plan: BigNumber;
   to: string;
   data: BytesLike;
-  gas: BigNumber;
-  timestamp: BigNumber;
+  timestamp: Date;
   value: BigNumber;
-  state?: BigNumber;
 }
 
 export enum ExecutionState {
-  Scheduled = 0,
-  ExecutionSuccessful = 1,
-  ExecutionFailed = 2,
-  Overdue = 3,
-  Refunded = 4,
-  Cancelled = 5
+  Nonexistent = 0,
+  Scheduled = 1,
+  ExecutionSuccessful = 2,
+  ExecutionFailed = 3,
+  Overdue = 4,
+  Refunded = 5,
+  Cancelled = 6
 }
 
 export const ErrorMessages = {
   SIGNER_REQUIRED: ''
+}
 
+export type ScheduledExecution = {
+  id:string;
+  timestamp: Date
 }

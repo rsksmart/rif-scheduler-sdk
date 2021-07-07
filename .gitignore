@@ -1,7 +1,7 @@
 node_modules
 coverage
 dist
-src/contracts/types/
+test/contracts/types/
 .env
 .env.prod
 .DS_Store

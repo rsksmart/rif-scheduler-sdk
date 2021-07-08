@@ -131,3 +131,10 @@ npm run lint:fix
 ```
 npm run build
 ```
+
+### Branching model
+
+- `main` has latest release. Merge into `main` will deploy to npm. Do merge commits.
+- `develop` has latest approved PR. PRs need to pass `ci` and `scan`. Do squash & merge.
+- Use branches pointing to `develop` to add new PRs.
+- Do external PRs against latest commit in `develop`.

@@ -1,5 +1,5 @@
 import { BigNumber } from 'ethers'
-import { RIFScheduler, executionFactory, IPlanResponse } from '../src'
+import { RIFScheduler, IPlanResponse, Execution } from '../src'
 import { getUsers, contractsSetUp, plansSetup, encodedCallSamples } from './setup'
 import dayjs from 'dayjs'
 import hasEvent from './hasEvent'
@@ -41,7 +41,7 @@ describe('SDK - schedule', function (this: {
     const timestamp = dayjs(await timeLatest()).add(1, 'day').toDate()
     const valueToTransfer = BigNumber.from(1)
 
-    const execution = executionFactory(planId, this.contracts.tokenAddress, encodedMethodCall, timestamp, valueToTransfer, this.consumerAddress)
+    const execution = new Execution(planId, this.contracts.tokenAddress, encodedMethodCall, timestamp, valueToTransfer, this.consumerAddress)
     const scheduledExecution = await this.schedulerSDK.schedule(execution)
     const receipt = await scheduledExecution.wait()
     expect(hasEvent(receipt, 'ExecutionRequested')).toBe(true)
@@ -62,7 +62,7 @@ describe('SDK - schedule', function (this: {
     const startTimestamp = dayjs(new Date(today.getFullYear(), today.getMonth(), today.getDate())).add(1, 'day').toDate()
     const valueToTransfer = BigNumber.from(1)
 
-    const execution = executionFactory(planId, this.contracts.tokenAddress, encodedMethodCall, startTimestamp, valueToTransfer, this.consumerAddress)
+    const execution = new Execution(planId, this.contracts.tokenAddress, encodedMethodCall, startTimestamp, valueToTransfer, this.consumerAddress)
     const scheduleExecutions = await this.schedulerSDK.scheduleMany(execution, cronExpression, quantity)
     const receipt = await scheduleExecutions.wait()
     const parsedResponse = this.schedulerSDK.parseScheduleManyReceipt(receipt)
@@ -79,7 +79,7 @@ describe('SDK - schedule', function (this: {
 
     const value = 10000
 
-    const execution = executionFactory(0, this.contracts.tokenAddress, encodedMethodCall, dayjs(await timeLatest()).toDate(), value, this.consumerAddress)
+    const execution = new Execution(0, this.contracts.tokenAddress, encodedMethodCall, dayjs(await timeLatest()).toDate(), value, this.consumerAddress)
     expect(async () => {
       await this.schedulerSDK.scheduleMany(execution, '*/15 * * * *', 1)
     }).rejects.toThrow("You don't enough remaining executions.")

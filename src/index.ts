@@ -1,3 +1,3 @@
 export { RIFScheduler } from './RIFScheduler'
-export { executionFactory } from './executionFactory'
+export { Execution } from './Execution'
 export * from './types'

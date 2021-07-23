@@ -1,20 +1,10 @@
-import { BigNumber, BigNumberish, BytesLike } from 'ethers'
+import { BigNumber, BytesLike } from 'ethers'
 export interface IPlanResponse {
   pricePerExecution: BigNumber;
   window: BigNumber;
   token: string;
   active: boolean;
   gasLimit: BigNumber;
-}
-
-export interface IExecutionRequest {
-  id: string;
-  requestor: string;
-  plan: BigNumberish;
-  to: string;
-  data: BytesLike;
-  timestamp: BigNumberish;
-  value: BigNumberish;
 }
 
 export interface IExecutionResponse {

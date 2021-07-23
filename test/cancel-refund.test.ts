@@ -1,9 +1,10 @@
 import { BigNumber } from 'ethers'
-import { RIFScheduler, executionFactory, ExecutionState, IPlanResponse } from '../src'
+import { RIFScheduler, ExecutionState, IPlanResponse } from '../src'
 import { getUsers, contractsSetUp, plansSetup, encodedCallSamples } from './setup'
 import dayjs from 'dayjs'
 import { time } from '@openzeppelin/test-helpers'
 import { timeLatest } from './timeLatest'
+import { Execution } from '../src/Execution'
 
 /// this tests give a log message: Duplicate definition of Transfer (Transfer(address,address,uint256,bytes), Transfer(address,address,uint256))
 /// don't worry: https://github.com/ethers-io/ethers.js/issues/905
@@ -40,7 +41,8 @@ describe('SDK - cancel/refund', function (this: {
     const timestamp = dayjs(await timeLatest()).add(1, 'day').toDate()
     const valueToTransfer = BigNumber.from(1)
 
-    const execution = executionFactory(planId, this.contracts.tokenAddress, encodedMethodCall, timestamp, valueToTransfer, this.consumerAddress)
+    const execution = new Execution(planId, this.contracts.tokenAddress, encodedMethodCall, timestamp, valueToTransfer, this.consumerAddress)
+
     const scheduledExecution = await this.schedulerSDK.schedule(execution)
     await scheduledExecution.wait()
 
@@ -66,7 +68,7 @@ describe('SDK - cancel/refund', function (this: {
     const timestamp = dayjs(await timeLatest()).add(EXTRA_MINUTES, 'minutes').toDate()
     const valueToTransfer = BigNumber.from(1)
 
-    const execution = executionFactory(planId, this.contracts.tokenAddress, encodedMethodCall, timestamp, valueToTransfer, this.consumerAddress)
+    const execution = new Execution(planId, this.contracts.tokenAddress, encodedMethodCall, timestamp, valueToTransfer, this.consumerAddress)
     const scheduledExecution = await this.schedulerSDK.schedule(execution)
     await scheduledExecution.wait()
 
@@ -94,7 +96,7 @@ describe('SDK - cancel/refund', function (this: {
     const timestamp = dayjs(await timeLatest()).add(1, 'day').toDate()
     const valueToTransfer = BigNumber.from(1)
 
-    const execution = executionFactory(planId, this.contracts.tokenAddress, encodedMethodCall, timestamp, valueToTransfer, this.consumerAddress)
+    const execution = new Execution(planId, this.contracts.tokenAddress, encodedMethodCall, timestamp, valueToTransfer, this.consumerAddress)
     const scheduledExecution = await this.schedulerSDK.schedule(execution)
     await scheduledExecution.wait()
 
@@ -110,7 +112,7 @@ describe('SDK - cancel/refund', function (this: {
     const timestamp = dayjs(await timeLatest()).add(1, 'day').toDate()
     const valueToTransfer = BigNumber.from(1)
 
-    const execution = executionFactory(planId, this.contracts.tokenAddress, encodedMethodCall, timestamp, valueToTransfer, this.consumerAddress)
+    const execution = new Execution(planId, this.contracts.tokenAddress, encodedMethodCall, timestamp, valueToTransfer, this.consumerAddress)
 
     await expect(this.schedulerSDK.cancelExecution(execution))
       .rejects

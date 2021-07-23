@@ -1,8 +1,9 @@
 import { BigNumber } from 'ethers'
-import { RIFScheduler, executionFactory, ExecutionState, IExecutionRequest, IExecutionResponse, IPlanResponse } from '../src'
+import { RIFScheduler, ExecutionState, IPlanResponse } from '../src'
 import { getUsers, contractsSetUp, plansSetup, encodedCallSamples } from './setup'
 import dayjs from 'dayjs'
 import { timeLatest } from './timeLatest'
+import { Execution } from '../src/Execution'
 
 /// this tests give a log message: Duplicate definition of Transfer (Transfer(address,address,uint256,bytes), Transfer(address,address,uint256))
 /// don't worry: https://github.com/ethers-io/ethers.js/issues/905
@@ -31,7 +32,7 @@ describe('SDK - execution', function (this: {
 
   describe('should get scheduled execution state', () => {
     let state: ExecutionState
-    let execution: IExecutionRequest
+    let execution: Execution
 
     beforeEach(async () => {
       const planId = 1
@@ -43,13 +44,13 @@ describe('SDK - execution', function (this: {
       const timestamp = dayjs(await timeLatest()).add(1, 'day').toDate()
       const valueToTransfer = BigNumber.from(1)
 
-      execution = executionFactory(planId, this.contracts.tokenAddress, encodedMethodCall, timestamp, valueToTransfer, this.consumerAddress)
+      execution = new Execution(planId, this.contracts.tokenAddress, encodedMethodCall, timestamp, valueToTransfer, this.consumerAddress)
       const tx = await this.schedulerSDK.schedule(execution)
       await tx.wait()
     })
 
     test('using execution as parameter', async () => { state = await this.schedulerSDK.getExecutionState(execution) })
-    test('using execution id as parameter', async () => { state = await this.schedulerSDK.getExecutionState(execution.id) })
+    test('using execution id as parameter', async () => { state = await this.schedulerSDK.getExecutionState(execution.getId()) })
 
     afterEach(async () => {
       expect(state).toBe(ExecutionState.Scheduled)
@@ -69,7 +70,7 @@ describe('SDK - execution', function (this: {
     const startTimestamp = dayjs(new Date(today.getFullYear(), today.getMonth(), today.getDate())).add(1, 'day').toDate()
     const valueToTransfer = BigNumber.from(1)
 
-    const execution = executionFactory(planId, this.contracts.tokenAddress, encodedMethodCall, startTimestamp, valueToTransfer, this.consumerAddress)
+    const execution = new Execution(planId, this.contracts.tokenAddress, encodedMethodCall, startTimestamp, valueToTransfer, this.consumerAddress)
     const scheduleExecutionsTransaction = await this.schedulerSDK.scheduleMany(execution, cronExpression, quantity)
     await scheduleExecutionsTransaction.wait()
 
@@ -80,7 +81,7 @@ describe('SDK - execution', function (this: {
     let toIndex = 0
     let pageNumber = 1
     let hasMore = true
-    const result: IExecutionResponse[] = []
+    let result: Execution[] = []
     while (hasMore) {
       fromIndex = (pageNumber - 1) * pageSize
       toIndex = pageNumber * pageSize
@@ -92,7 +93,7 @@ describe('SDK - execution', function (this: {
 
       const scheduledTransactionsPage = await this.schedulerSDK.getScheduledExecutions(this.consumerAddress, fromIndex, toIndex)
 
-      result.push(...scheduledTransactionsPage)
+      result = result.concat(scheduledTransactionsPage)
 
       pageNumber++
     }
@@ -101,8 +102,8 @@ describe('SDK - execution', function (this: {
     expect(result.length).toBe(quantity)
 
     for (const execution of result) {
-      expect(execution.id).toBeDefined()
-      expect(execution.timestamp >= startTimestamp).toBeTruthy()
+      expect(execution.getId()).toBeDefined()
+      expect(execution.executeAt >= startTimestamp).toBeTruthy()
     }
   })
 

@@ -135,6 +135,10 @@ export class RIFScheduler {
     }
   }
 
+  getMinimumTimeBeforeExecution = () => {
+    return this.schedulerContract.minimumTimeBeforeExecution()
+  }
+
   schedule = (execution: IExecutionRequest) => this.schedulerContract.schedule(
     execution.plan,
     execution.to,

@@ -105,4 +105,10 @@ describe('SDK - execution', function (this: {
       expect(execution.timestamp >= startTimestamp).toBeTruthy()
     }
   })
+
+  test('should be able to get the minimum time before execution', async () => {
+    const minimumTime = await this.schedulerSDK.getMinimumTimeBeforeExecution()
+
+    expect(minimumTime.gt(0)).toBeTruthy()
+  })
 })

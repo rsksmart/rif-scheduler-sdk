@@ -1,115 +1,264 @@
-import { BigNumber } from 'ethers'
-import { RIFScheduler, ExecutionState, IPlanResponse } from '../src'
-import { getUsers, contractsSetUp, plansSetup, encodedCallSamples } from './setup'
 import dayjs from 'dayjs'
-import { timeLatest } from './timeLatest'
-import { Execution } from '../src/Execution'
-
-/// this tests give a log message: Duplicate definition of Transfer (Transfer(address,address,uint256,bytes), Transfer(address,address,uint256))
-/// don't worry: https://github.com/ethers-io/ethers.js/issues/905
+import { BigNumber } from 'ethers'
+import { Execution, EExecutionState, RIFScheduler } from '../src'
+import { Plan } from '../src/model/Plan'
+import { timeLatest } from '../test/timeLatest'
+import { getUsers, contractsSetUp, plansSetup, encodedCallSamples } from './setup'
+import { time } from '@openzeppelin/test-helpers'
 
 jest.setTimeout(27000)
 
-describe('SDK - execution', function (this: {
-    schedulerSDK: RIFScheduler,
+describe('Execution', function (this: {
+    rifScheduler: RIFScheduler,
     contracts: {
       schedulerAddress: string;
       tokenAddress: string;
       tokenAddress677: string;
     },
-    plans: IPlanResponse[],
+    plans: Plan[],
     encodedTxSamples: { successful: string, failing: string },
     consumerAddress: string
   }) {
   beforeEach(async () => {
     const users = await getUsers()
     this.contracts = await contractsSetUp()
-    this.schedulerSDK = new RIFScheduler(this.contracts.schedulerAddress, users.serviceConsumer, { supportedER677Tokens: [this.contracts.tokenAddress677] })
+    this.rifScheduler = new RIFScheduler({
+      contractAddress: this.contracts.schedulerAddress,
+      providerOrSigner: users.serviceConsumer,
+      supportedERC677Tokens: [this.contracts.tokenAddress677]
+    })
     this.plans = await plansSetup(this.contracts.schedulerAddress, this.contracts.tokenAddress, this.contracts.tokenAddress677)
     this.encodedTxSamples = await encodedCallSamples()
     this.consumerAddress = await users.serviceConsumer.getAddress()
   })
 
-  describe('should get scheduled execution state', () => {
-    let state: ExecutionState
-    let execution: Execution
+  test('should be able to get the execution id (off-chain)', async () => {
+    const encodedMethodCall = this.encodedTxSamples.successful
+    const timestamp = dayjs(await timeLatest()).add(1, 'day').toDate()
+    const valueToTransfer = BigNumber.from(1)
+    const plan = await this.rifScheduler.getPlan(1)
 
-    beforeEach(async () => {
-      const planId = 1
-      const purchaseTx = await this.schedulerSDK.purchasePlan(planId, 1)
-      await purchaseTx.wait()
-      const encodedMethodCall = this.encodedTxSamples.successful
-      // TODO: review this code
-      // const gas = await this.schedulerSDK.estimateGas(this.contracts.tokenAddress, encodedMethodCall)
-      const timestamp = dayjs(await timeLatest()).add(1, 'day').toDate()
-      const valueToTransfer = BigNumber.from(1)
+    const execution = new Execution(
+      this.rifScheduler.config,
+      plan,
+      this.contracts.tokenAddress,
+      encodedMethodCall,
+      timestamp,
+      valueToTransfer,
+      this.consumerAddress
+    )
 
-      execution = new Execution(planId, this.contracts.tokenAddress, encodedMethodCall, timestamp, valueToTransfer, this.consumerAddress)
-      const tx = await this.schedulerSDK.schedule(execution)
-      await tx.wait()
-    })
-
-    test('using execution as parameter', async () => { state = await this.schedulerSDK.getExecutionState(execution) })
-    test('using execution id as parameter', async () => { state = await this.schedulerSDK.getExecutionState(execution.getId()) })
-
-    afterEach(async () => {
-      expect(state).toBe(ExecutionState.Scheduled)
-    })
+    expect(execution.getId()).toBeDefined()
+    expect(execution.getId()).not.toBe('')
   })
 
-  test('should get scheduled executions by requester', async () => {
-    const planId = 1
-    const cronExpression = '0 0 */1 * *'
-    const quantity = 7
-    const purchaseTx = await this.schedulerSDK.purchasePlan(planId, quantity)
-    await purchaseTx.wait()
+  test('should be able to encode the execution (off-chain)', async () => {
     const encodedMethodCall = this.encodedTxSamples.successful
-    // TODO: review this code
-    // const gas = await this.schedulerSDK.estimateGas(this.contracts.tokenAddress, encodedMethodCall)
-    const today = await timeLatest()
-    const startTimestamp = dayjs(new Date(today.getFullYear(), today.getMonth(), today.getDate())).add(1, 'day').toDate()
+    const timestamp = dayjs(await timeLatest()).add(1, 'day').toDate()
+    const valueToTransfer = BigNumber.from(1)
+    const plan = await this.rifScheduler.getPlan(1)
+
+    const execution = new Execution(
+      this.rifScheduler.config,
+      plan,
+      this.contracts.tokenAddress,
+      encodedMethodCall,
+      timestamp,
+      valueToTransfer,
+      this.consumerAddress
+    )
+
+    expect(execution.encode()).toBeDefined()
+    expect(execution.encode()).not.toBe('')
+  })
+
+  test('should be able to estimate the gas for the execution', async () => {
+    const encodedMethodCall = this.encodedTxSamples.successful
+    const timestamp = dayjs(await timeLatest()).add(1, 'day').toDate()
+    const valueToTransfer = BigNumber.from(1)
+    const plan = await this.rifScheduler.getPlan(1)
+
+    const execution = new Execution(
+      this.rifScheduler.config,
+      plan,
+      this.contracts.tokenAddress,
+      encodedMethodCall,
+      timestamp,
+      valueToTransfer,
+      this.consumerAddress
+    )
+
+    const gas = await execution.estimateGas(this.rifScheduler.provider)
+
+    expect(gas).not.toBeNull()
+
+    expect(gas!.gt(0)).toBeTruthy()
+  })
+
+  test('should not estimateGas for invalid method/parameter', async () => {
+    const plan = await this.rifScheduler.getPlan(1)
+    const encodedMethodCall = this.encodedTxSamples.failing
+    const timestamp = dayjs(await timeLatest()).add(1, 'day').toDate()
     const valueToTransfer = BigNumber.from(1)
 
-    const execution = new Execution(planId, this.contracts.tokenAddress, encodedMethodCall, startTimestamp, valueToTransfer, this.consumerAddress)
-    const scheduleExecutionsTransaction = await this.schedulerSDK.scheduleMany(execution, cronExpression, quantity)
-    await scheduleExecutionsTransaction.wait()
+    const execution = new Execution(
+      this.rifScheduler.config,
+      plan,
+      this.contracts.tokenAddress,
+      encodedMethodCall,
+      timestamp,
+      valueToTransfer,
+      this.consumerAddress
+    )
 
-    const scheduledTransactionsCount = await this.schedulerSDK.getScheduledExecutionsCount(this.consumerAddress)
-    const pageSize = 2
+    const gasResult = await execution.estimateGas(this.rifScheduler.provider)
 
-    let fromIndex = 0
-    let toIndex = 0
-    let pageNumber = 1
-    let hasMore = true
-    let result: Execution[] = []
-    while (hasMore) {
-      fromIndex = (pageNumber - 1) * pageSize
-      toIndex = pageNumber * pageSize
+    expect(gasResult).toBeNull()
+  })
 
-      if (scheduledTransactionsCount.lte(toIndex)) {
-        hasMore = false
-        toIndex = scheduledTransactionsCount.toNumber()
-      }
+  test('should generate executions from cron expression (off-chain)', async () => {
+    const encodedMethodCall = this.encodedTxSamples.successful
+    const startTimestamp = dayjs(await timeLatest()).add(1, 'day').toDate()
+    const valueToTransfer = BigNumber.from(1)
+    const plan = await this.rifScheduler.getPlan(1)
+    const cronExpression = '0 0 */1 * *'
+    const quantity = 7
 
-      const scheduledTransactionsPage = await this.schedulerSDK.getScheduledExecutions(this.consumerAddress, fromIndex, toIndex)
+    const execution = new Execution(
+      this.rifScheduler.config,
+      plan,
+      this.contracts.tokenAddress,
+      encodedMethodCall,
+      startTimestamp,
+      valueToTransfer,
+      this.consumerAddress
+    )
 
-      result = result.concat(scheduledTransactionsPage)
+    const executionsToSchedule = Execution.fromCronExpression(execution, cronExpression, quantity)
 
-      pageNumber++
-    }
+    expect(executionsToSchedule.length).toBe(quantity)
 
-    expect(scheduledTransactionsCount.eq(quantity)).toBeTruthy()
-    expect(result.length).toBe(quantity)
-
-    for (const execution of result) {
+    for (const execution of executionsToSchedule) {
       expect(execution.getId()).toBeDefined()
       expect(execution.executeAt >= startTimestamp).toBeTruthy()
     }
   })
 
-  test('should be able to get the minimum time before execution', async () => {
-    const minimumTime = await this.schedulerSDK.getMinimumTimeBeforeExecution()
+  test('should be able to cancel a scheduled execution', async () => {
+    const plan = await this.rifScheduler.getPlan(1)
+    const purchaseTx = await plan.purchase(1)
+    purchaseTx.wait()
+    const encodedMethodCall = this.encodedTxSamples.successful
+    const timestamp = dayjs(await timeLatest()).add(1, 'day').toDate()
+    const valueToTransfer = BigNumber.from(1)
 
-    expect(minimumTime.gt(0)).toBeTruthy()
+    const execution = new Execution(
+      this.rifScheduler.config,
+      plan,
+      this.contracts.tokenAddress,
+      encodedMethodCall,
+      timestamp,
+      valueToTransfer,
+      this.consumerAddress
+    )
+
+    const scheduleTx = await this.rifScheduler.schedule(execution)
+    await scheduleTx.wait()
+
+    const initialState = await execution.getState()
+
+    const cancelTx = await execution.cancel()
+    await cancelTx.wait()
+
+    const stateAfterCancel = await execution.getState()
+
+    expect(initialState).toBe(EExecutionState.Scheduled)
+    expect(stateAfterCancel).toBe(EExecutionState.Cancelled)
+  })
+
+  test('should be able to refund an overdue scheduled execution', async () => {
+    const EXTRA_MINUTES = 15
+    const plan = await this.rifScheduler.getPlan(1)
+    const purchaseTx = await plan.purchase(1)
+    purchaseTx.wait()
+    const encodedMethodCall = this.encodedTxSamples.successful
+
+    const timestamp = dayjs(await timeLatest()).add(EXTRA_MINUTES, 'minutes').toDate()
+    const valueToTransfer = BigNumber.from(1)
+
+    const execution = new Execution(
+      this.rifScheduler.config,
+      plan,
+      this.contracts.tokenAddress,
+      encodedMethodCall,
+      timestamp,
+      valueToTransfer,
+      this.consumerAddress
+    )
+    const scheduleTx = await this.rifScheduler.schedule(execution)
+    await scheduleTx.wait()
+
+    await time.increaseTo(dayjs(timestamp).add(2, 'days').unix())
+    await time.advanceBlock()
+
+    const initialState = await execution.getState()
+
+    const refundTx = await execution.refund()
+    await refundTx.wait()
+
+    const stateAfterCancel = await execution.getState()
+
+    expect(initialState).toBe(EExecutionState.Overdue)
+    expect(stateAfterCancel).toBe(EExecutionState.Refunded)
+  })
+
+  test('refund should fail with a not scheduled execution', async () => {
+    const plan = await this.rifScheduler.getPlan(1)
+    const purchaseTx = await plan.purchase(1)
+    purchaseTx.wait()
+    const encodedMethodCall = this.encodedTxSamples.successful
+
+    const timestamp = dayjs(await timeLatest()).add(1, 'day').toDate()
+    const valueToTransfer = BigNumber.from(1)
+
+    const execution = new Execution(
+      this.rifScheduler.config,
+      plan,
+      this.contracts.tokenAddress,
+      encodedMethodCall,
+      timestamp,
+      valueToTransfer,
+      this.consumerAddress
+    )
+    const scheduleTx = await this.rifScheduler.schedule(execution)
+    await scheduleTx.wait()
+
+    await expect(execution.refund())
+      .rejects
+      .toThrow('VM Exception while processing transaction: revert Not overdue')
+  })
+
+  test('cancel should fail with a not scheduled execution', async () => {
+    const plan = await this.rifScheduler.getPlan(1)
+    const purchaseTx = await plan.purchase(1)
+    purchaseTx.wait()
+
+    const encodedMethodCall = this.encodedTxSamples.successful
+    const timestamp = dayjs(await timeLatest()).add(1, 'day').toDate()
+    const valueToTransfer = BigNumber.from(1)
+
+    const execution = new Execution(
+      this.rifScheduler.config,
+      plan,
+      this.contracts.tokenAddress,
+      encodedMethodCall,
+      timestamp,
+      valueToTransfer,
+      this.consumerAddress
+    )
+
+    await expect(execution.cancel())
+      .rejects
+      .toThrow('VM Exception while processing transaction: revert Not scheduled')
   })
 })

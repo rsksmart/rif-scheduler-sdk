@@ -1,4 +1,4 @@
-import { BigNumber, BigNumberish, ContractTransaction, providers, utils } from 'ethers'
+import { BigNumber, BigNumberish, ContractTransaction, utils } from 'ethers'
 import dayjs from 'dayjs'
 import * as cronParser from 'cron-parser'
 import { Plan } from './Plan'
@@ -64,9 +64,9 @@ class Execution extends Base {
     return encoder.encode(paramTypes, paramValues)
   }
 
-  public async estimateGas (provider: providers.Provider): Promise<BigNumber | null> {
+  public async estimateGas (): Promise<BigNumber | null> {
     try {
-      const gas = await provider
+      const gas = await this.provider
         .estimateGas({
           to: this.contractAddress,
           data: this.contractFunctionEncoded

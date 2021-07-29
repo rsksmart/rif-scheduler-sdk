@@ -88,7 +88,7 @@ describe('Execution', function (this: {
       this.consumerAddress
     )
 
-    const gas = await execution.estimateGas(this.rifScheduler.provider)
+    const gas = await execution.estimateGas()
 
     expect(gas).not.toBeNull()
 
@@ -111,7 +111,7 @@ describe('Execution', function (this: {
       this.consumerAddress
     )
 
-    const gasResult = await execution.estimateGas(this.rifScheduler.provider)
+    const gasResult = await execution.estimateGas()
 
     expect(gasResult).toBeNull()
   })

@@ -98,6 +98,38 @@ describe('RIFScheduler', function (this: {
     expect(resultState).toBe(EExecutionState.Scheduled)
   })
 
+  test('should get scheduled execution by id', async () => {
+    const plan = await this.rifScheduler.getPlan(1)
+    const quantity = 3
+
+    const purchaseTx = await plan.purchase(quantity)
+    await purchaseTx.wait()
+
+    const encodedMethodCall = this.encodedTxSamples.successful
+    const today = await timeLatest()
+    const startTimestamp = dayjs(new Date(today.getFullYear(), today.getMonth(), today.getDate())).add(1, 'day').toDate()
+    const valueToTransfer = BigNumber.from(1)
+
+    const executionToSchedule = new Execution(
+      this.rifScheduler.config,
+      plan,
+      this.contracts.tokenAddress,
+      encodedMethodCall,
+      startTimestamp,
+      valueToTransfer,
+      this.consumerAddress
+    )
+
+    const scheduleTx = await this.rifScheduler.schedule(executionToSchedule)
+    await scheduleTx.wait()
+
+    const scheduledExecution = await this.rifScheduler.getExecution(executionToSchedule.getId())
+    const state = await scheduledExecution.getState()
+
+    expect(scheduledExecution.getId()).toBe(executionToSchedule.getId())
+    expect(state).toBe(EExecutionState.Scheduled)
+  })
+
   test('should get scheduled executions by requester', async () => {
     const plan = await this.rifScheduler.getPlan(1)
     const cronExpression = '0 0 */1 * *'

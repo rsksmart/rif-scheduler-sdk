@@ -34,6 +34,23 @@ export class RIFScheduler extends Base {
     return this.schedulerContract.executionsByRequestorCount(accountAddress)
   }
 
+  public async getExecution (executionId: string): Promise<Execution> {
+    const execution = await this.schedulerContract.getExecutionById(executionId)
+    const executionTimestampDate = dayjs.unix(BigNumber.from(execution.timestamp).toNumber()).toDate()
+
+    const plan = await this.getPlan(execution.plan)
+
+    return new Execution(
+      this.config,
+      plan,
+      execution.to,
+      execution.data,
+      executionTimestampDate,
+      execution.value,
+      execution.requestor
+    )
+  }
+
   public async getExecutions (accountAddress: string, fromIndex: BigNumberish, toIndex: BigNumberish): Promise<Execution[]> {
     const executions = await this.schedulerContract.getExecutionsByRequestor(accountAddress, fromIndex, toIndex)
     const plansCache: Plan[] = []

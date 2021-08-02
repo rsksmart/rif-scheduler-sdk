@@ -39,11 +39,11 @@ class Execution extends Base {
     const paramTypes = ['address', 'uint256', 'address', 'bytes', 'uint256', 'uint256']
     const paramValues = [
       this.requestor,
-      this.plan.index.toString(),
+      this.plan.index,
       this.contractAddress,
       this.contractFunctionEncoded,
-      this.executeAtBigNumber.toString(),
-      this.value.toString()
+      this.executeAtBigNumber,
+      this.value
     ]
     const encodedData = encoder.encode(paramTypes, paramValues)
     return utils.keccak256(encodedData)

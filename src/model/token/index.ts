@@ -48,7 +48,7 @@ class Token extends Base {
     const signerAddress = await this.signer!.getAddress()
     const allowance = await this.tokenContract.allowance(signerAddress, this.schedulerContract.address)
 
-    const hasEnoughAllowance = allowance.lt(amount)
+    const hasEnoughAllowance = allowance.gte(amount)
 
     return !hasEnoughAllowance
   }

@@ -3,7 +3,8 @@ import type { RIFScheduler as RIFSchedulerContract } from '@rsksmart/rif-schedul
 import { ERC677__factory as ERC677Factory } from './contracts/types/factories/ERC677__factory'
 import ERC677Data from './contracts/ERC677.json'
 import { utils, Signer, BigNumber, constants, providers } from 'ethers'
-import { IPlanResponse } from '../src'
+import { Plan } from '../src/Plan'
+import { Token } from '../src/token'
 
 const Config = {
   BLOCKCHAIN_HTTP_URL: 'HTTP://127.0.0.1:8545',
@@ -50,22 +51,32 @@ const contractsSetUp = async function (): Promise<{schedulerAddress:string, toke
     Config.MINIMUM_TIME_BEFORE_EXECUTION
   )
 
-  return { schedulerAddress: schedulerContract.address, tokenAddress: erc20.address, tokenAddress677: erc677.address }
+  const result = { schedulerAddress: schedulerContract.address, tokenAddress: erc20.address, tokenAddress677: erc677.address }
+
+  return result
 }
 
-const plansSetup = async function (oneShotScheduleContract:string, tokenAddress:string, tokenAddress677:string):Promise<IPlanResponse[]> {
+const plansSetup = async function (oneShotScheduleContract:string, tokenAddress:string, tokenAddress677:string):Promise<Plan[]> {
   const users = await getUsers()
   const initialGasLimit = BigNumber.from(10000)
-  const plans: IPlanResponse[] = [
-    { pricePerExecution: BigNumber.from(3), window: BigNumber.from(10000), token: tokenAddress, active: true, gasLimit: initialGasLimit },
-    { pricePerExecution: BigNumber.from(4), window: BigNumber.from(300), token: tokenAddress677, active: true, gasLimit: initialGasLimit.mul(10) },
-    { pricePerExecution: BigNumber.from(4), window: BigNumber.from(200), token: constants.AddressZero, active: true, gasLimit: initialGasLimit.mul(100) }
+
+  const config = {
+    contractAddress: oneShotScheduleContract,
+    providerOrSigner: users.serviceConsumer,
+    supportedERC677Tokens: [tokenAddress677]
+  }
+  const plans: Plan[] = [
+    new Plan(config, 0, new Token(config, tokenAddress), BigNumber.from(10000), BigNumber.from(3), initialGasLimit),
+    new Plan(config, 1, new Token(config, tokenAddress677), BigNumber.from(300), BigNumber.from(4), initialGasLimit.mul(10)),
+    new Plan(config, 2, new Token(config, constants.AddressZero), BigNumber.from(200), BigNumber.from(4), initialGasLimit.mul(100))
   ]
 
   const oneShotScheduleContractProvider: RIFSchedulerContract = RIFSchedulerFactory.connect(oneShotScheduleContract, users.serviceProvider)
-  await oneShotScheduleContractProvider.addPlan(plans[0].pricePerExecution, plans[0].window, plans[0].gasLimit, tokenAddress)
-  await oneShotScheduleContractProvider.addPlan(plans[1].pricePerExecution, plans[1].window, plans[1].gasLimit, tokenAddress677)
-  await oneShotScheduleContractProvider.addPlan(plans[2].pricePerExecution, plans[2].window, plans[2].gasLimit, constants.AddressZero)
+
+  for (const plan of plans) {
+    await oneShotScheduleContractProvider.addPlan(plan.pricePerExecution, plan.window, plan.gasLimit, plan.token.address)
+  }
+
   return plans
 }
 

@@ -5,4 +5,4 @@ test/contracts/types
 .env
 .env.prod
 .DS_Store
-src/model/token/types
+src/token/types

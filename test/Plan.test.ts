@@ -1,5 +1,5 @@
 import { RIFScheduler } from '../src'
-import { Plan } from '../src/model/Plan'
+import { Plan } from '../src/Plan'
 import { hasEvent } from '../test/utils'
 import { getUsers, contractsSetUp, plansSetup, encodedCallSamples } from './setup'
 // eslint-disable-next-line camelcase

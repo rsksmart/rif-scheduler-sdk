@@ -1,4 +1,4 @@
-export { RIFScheduler } from './model/RIFScheduler'
-export { Token, TokenType } from './model/token'
-export { Plan } from './model/Plan'
-export { Execution, EExecutionState } from './model/Execution'
+export { RIFScheduler } from './RIFScheduler'
+export { Token, TokenType } from './token'
+export { Plan } from './Plan'
+export { Execution, EExecutionState } from './Execution'

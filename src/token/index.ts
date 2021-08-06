@@ -1,5 +1,4 @@
 import { BigNumber, BigNumberish, constants, ContractTransaction } from 'ethers'
-import { insensitiveIsEqualTo } from '../../scripts'
 import { Base, Config } from '../Base'
 // eslint-disable-next-line camelcase
 import { ERC20, ERC20__factory } from './types'
@@ -16,7 +15,7 @@ class Token extends Base {
   constructor (config: Config, public address: string) {
     super(config)
 
-    this.tokenContract = ERC20__factory.connect(address, this.currentProviderOrSigner)
+    this.tokenContract = ERC20__factory.connect(address, this.providerOrSigner)
   }
 
   public getType (): TokenType {
@@ -71,3 +70,6 @@ class Token extends Base {
 }
 
 export { Token }
+
+const insensitiveIsEqualTo = (value: string) => (compareWith: string) =>
+  value.toLowerCase().trim() === compareWith.toLowerCase().trim()

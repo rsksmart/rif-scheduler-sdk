@@ -9,22 +9,22 @@ export type Config = {
 }
 
 export class Base {
+  public providerOrSigner: providers.Provider | Signer
+
   public schedulerContract!: RIFSchedulerContract
-  public provider!: providers.Provider
-  public currentProviderOrSigner: providers.Provider | Signer
-  public signer?: Signer
   public supportedERC677Tokens: string[]
 
+  get signer (): Signer | null {
+    return Signer.isSigner(this.providerOrSigner) ? this.providerOrSigner : null
+  }
+
+  get provider (): providers.Provider {
+    return Signer.isSigner(this.providerOrSigner) ? this.providerOrSigner.provider! : this.providerOrSigner
+  }
+
   constructor (public config: Config) {
-    this.currentProviderOrSigner = config.providerOrSigner || getDefaultProvider()
-    if (Signer.isSigner(this.currentProviderOrSigner)) {
-      this.provider = this.currentProviderOrSigner.provider!
-      this.signer = this.currentProviderOrSigner
-    } else {
-      this.provider = this.currentProviderOrSigner
-      this.signer = undefined
-    }
+    this.providerOrSigner = config.providerOrSigner || getDefaultProvider()
     this.supportedERC677Tokens = config.supportedERC677Tokens ?? []
-    this.schedulerContract = RIFSchedulerFactory.connect(config.contractAddress, this.currentProviderOrSigner)
+    this.schedulerContract = RIFSchedulerFactory.connect(config.contractAddress, this.providerOrSigner)
   }
 }

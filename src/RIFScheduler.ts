@@ -4,7 +4,6 @@ import { Execution } from './Execution'
 import { Base } from './Base'
 import { Plan } from './Plan'
 import { Token } from './token'
-import { groupBy } from '../scripts'
 
 export class RIFScheduler extends Base {
   async getPlansCount (): Promise<BigNumber> {
@@ -57,7 +56,7 @@ export class RIFScheduler extends Base {
     return Promise.all(executions.map(async (execution) => {
       const executionTimestampDate = dayjs.unix(BigNumber.from(execution.timestamp).toNumber()).toDate()
 
-      let plan = plansCache.find(x => x.index === execution.plan)
+      let plan = plansCache.find(x => x.index.eq(execution.plan))
 
       if (!plan) {
         plan = await this.getPlan(execution.plan)
@@ -92,15 +91,6 @@ export class RIFScheduler extends Base {
   }
 
   public async scheduleMany (executions: Execution[]): Promise<ContractTransaction> {
-    const executionsGroupedByPlanIndex = Array.from(groupBy(executions, (x: Execution) => x.plan.index))
-
-    for (const [planIndex, planExecutions] of executionsGroupedByPlanIndex) {
-      const remainingExecutions = await planExecutions[0].plan.getRemainingExecutions()
-      if (remainingExecutions.lt(planExecutions.length)) {
-        throw new Error(`Not enough remaining executions in plan #${planIndex}`)
-      }
-    }
-
     const encodedExecutions = executions.map(x => x.encode())
 
     const totalValue = executions.reduce((total, execution) => total.add(execution.value), BigNumber.from(0))

@@ -3,8 +3,8 @@ import type { RIFScheduler as RIFSchedulerContract } from '@rsksmart/rif-schedul
 import { ERC677__factory as ERC677Factory } from './contracts/types/factories/ERC677__factory'
 import ERC677Data from './contracts/ERC677.json'
 import { utils, Signer, BigNumber, constants, providers } from 'ethers'
-import { Plan } from '../src/model/Plan'
-import { Token } from '../src/model/token'
+import { Plan } from '../src/Plan'
+import { Token } from '../src/token'
 
 const Config = {
   BLOCKCHAIN_HTTP_URL: 'HTTP://127.0.0.1:8545',

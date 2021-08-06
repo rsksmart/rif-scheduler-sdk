@@ -1,7 +1,7 @@
 import dayjs from 'dayjs'
 import { BigNumber } from 'ethers'
 import { Execution, EExecutionState, RIFScheduler } from '../src'
-import { Plan } from '../src/model/Plan'
+import { Plan } from '../src/Plan'
 import { timeLatest } from '../test/timeLatest'
 import { getUsers, contractsSetUp, plansSetup, encodedCallSamples } from './setup'
 import { time } from '@openzeppelin/test-helpers'

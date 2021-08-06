@@ -1,5 +1,5 @@
 import { ContractReceipt } from 'ethers'
-import { Plan } from '../src/model/Plan'
+import { Plan } from '../src/Plan'
 
 export function hasEvent (receipt: ContractReceipt, eventName:string):boolean {
   return (receipt?.events) ? receipt.events.findIndex(e => e.event === eventName) > -1 : false

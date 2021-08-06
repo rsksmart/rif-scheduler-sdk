@@ -7,15 +7,15 @@
     "dist"
   ],
   "scripts": {
-    "postinstall": "typechain \"src/token/*.json\" --target=ethers-v5 --out-dir=src/token/types",
+    "build:prepare": "npx typechain \"src/token/*.json\" --target=ethers-v5 --out-dir=src/token/types",
     "ganache": "npx ganache-cli",
-    "test:prepare": "typechain \"test/contracts/*.json\" --target=ethers-v5 --out-dir=test/contracts/types",
+    "test:prepare": "npx typechain \"test/contracts/*.json\" --target=ethers-v5 --out-dir=test/contracts/types",
     "test": "npm run test:prepare && npx jest test/*.test.ts --verbose --coverage --runInBand",
     "test:coverage": "npm run test:prepare && npx jest test/*.test.ts --verbose --coverage --runInBand",
     "test:ci": "npm run test:prepare && npx jest test/*.test.ts --verbose --coverage --runInBand --ci",
     "lint": "npx eslint ./src --ext .json,.js,.ts",
     "lint:fix": "npx eslint ./src --ext .json,.js,.ts --fix",
-    "build": "rimraf ./dist && tsc"
+    "build": "npm run build:prepare && rimraf ./dist && tsc"
   },
   "repository": {
     "type": "git",

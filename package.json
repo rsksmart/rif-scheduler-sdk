@@ -1,12 +1,13 @@
 {
   "name": "@rsksmart/rif-scheduler-sdk",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "RIF Scheduler SDK",
   "main": "dist/index.js",
   "files": [
     "dist"
   ],
   "scripts": {
+    "postinstall": "typechain \"src/token/*.json\" --target=ethers-v5 --out-dir=src/token/types",
     "ganache": "npx ganache-cli",
     "test:prepare": "typechain \"test/contracts/*.json\" --target=ethers-v5 --out-dir=test/contracts/types",
     "test": "npm run test:prepare && npx jest test/*.test.ts --verbose --coverage --runInBand",

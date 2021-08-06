@@ -1,207 +1,100 @@
-import { utils, constants, providers, getDefaultProvider, Signer, Contract, ContractTransaction, ContractReceipt, Event, BigNumber, BigNumberish } from 'ethers'
-import type { RIFScheduler as RIFSchedulerContract } from '@rsksmart/rif-scheduler-contracts/types/ethers-contracts'
-import { RIFScheduler__factory as RIFSchedulerFactory } from '@rsksmart/rif-scheduler-contracts/dist/ethers-contracts/factories/RIFScheduler__factory'
+import { BigNumber, BigNumberish, ContractTransaction } from 'ethers'
 import dayjs from 'dayjs'
-import * as cronParser from 'cron-parser'
-import { IPlanResponse, IExecutionRequest, ScheduledExecution, IExecutionResponse } from './types'
-import { executionId } from './executionFactory'
+import { Execution } from './Execution'
+import { Base } from './Base'
+import { Plan } from './Plan'
+import { Token } from './token'
 
-const ERC20Factory = new Contract(constants.AddressZero, [
-  'function balanceOf(address owner) view returns (uint)',
-  'function allowance(address owner, address spender) view returns (uint)',
-  'function transfer(address to, uint amount)',
-  'function approve(address spender, uint amount)'
-]) // wildcard for different tokens. use attach to set address
-
-type Options = {
-  supportedER677Tokens: string[]
-}
-
-type ExecutionParam = string | IExecutionRequest
-const executionIdFromParam = (execution: ExecutionParam) => typeof execution === 'string' ? execution : execution.id
-
-export class RIFScheduler {
-  schedulerContract!: RIFSchedulerContract
-  provider!: providers.Provider
-  signer?: Signer
-  options?: Options
-  erc20: Contract
-
-  /**
-   * Initializes the Safe Core SDK instance.
-   *
-   * @param contractAddress - The address of the OneShotSchedule contract
-   * @param providerOrSigner - Ethers provider or signer. If this parameter is not passed, Ethers defaultProvider will be used.
-   * @param options
-   */
-
-  constructor (
-    contractAddress: string,
-    providerOrSigner?: providers.Provider | Signer,
-    options?: Options
-  ) {
-    const currentProviderOrSigner = providerOrSigner || getDefaultProvider()
-    if (Signer.isSigner(currentProviderOrSigner)) {
-      this.provider = currentProviderOrSigner.provider!
-      this.signer = currentProviderOrSigner
-    } else {
-      this.provider = currentProviderOrSigner
-      this.signer = undefined
-    }
-    this.schedulerContract = RIFSchedulerFactory.connect(contractAddress, currentProviderOrSigner)
-    this.options = options
-
-    this.erc20 = ERC20Factory.connect(currentProviderOrSigner)
+export class RIFScheduler extends Base {
+  async getPlansCount (): Promise<BigNumber> {
+    return this.schedulerContract.plansCount()
   }
 
-  getPlansCount = ():Promise<BigNumber> => this.schedulerContract.plansCount()
+  async getPlan (planIndex: BigNumberish): Promise<Plan> {
+    const plan = await this.schedulerContract.plans(planIndex)
 
-  getPlan = async (index: BigNumberish): Promise<IPlanResponse> => {
-    const plan = await this.schedulerContract.plans(index)
-    return plan as IPlanResponse
+    return new Plan(this.config, planIndex, new Token(this.config, plan.token), plan.window, plan.pricePerExecution, plan.gasLimit)
   }
 
-  remainingExecutions = (planId: BigNumberish):Promise<BigNumber> => this.signer!.getAddress()
-    .then(signerAddress => this.schedulerContract.remainingExecutions(signerAddress, planId))
+  async getPlans (): Promise<Plan[]> {
+    const plansCount = await this.getPlansCount()
 
-  async approveToken (tokenAddress: string, amount: BigNumberish): Promise<ContractTransaction> {
-    const token = this.erc20.attach(tokenAddress)
-    return await token.approve(this.schedulerContract.address, amount)
-  }
+    const plansList: Plan[] = []
 
-  private async _erc20Purchase (planId: BigNumberish, quantity: BigNumberish, tokenAddress: string, valueToTransfer: BigNumberish): Promise<ContractTransaction> {
-    const signerAddress = await this.signer!.getAddress()
-    const token = this.erc20.attach(tokenAddress)
-    const allowance = await token.allowance(signerAddress, this.schedulerContract.address)
-
-    const hasAllowance = allowance.lt(valueToTransfer)
-
-    if (hasAllowance) throw new Error(`The account ${signerAddress} has not enough allowance`)
-    return await this.schedulerContract.purchase(planId, quantity)
-  }
-
-  private async _erc677Purchase (planId: BigNumberish, quantity: BigNumberish, tokenAddress: string, valueToTransfer: BigNumberish): Promise<ContractTransaction> {
-    const encoder = new utils.AbiCoder()
-    const encodedData = encoder.encode(['uint256', 'uint256'], [planId.toString(), quantity.toString()])
-    const token = new Contract(tokenAddress, [
-      'function transferAndCall(address to, uint amount, bytes data)'
-    ], this.signer!)
-    return await token.transferAndCall(this.schedulerContract.address, valueToTransfer, encodedData)
-  }
-
-  private async _rbtcPurchase (planId: BigNumberish, quantity: BigNumberish, valueToTransfer: BigNumberish): Promise<ContractTransaction> {
-    const balance = await this.signer!.getBalance()
-    if (balance.lt(valueToTransfer)) throw new Error('Not enough balance')
-    return await this.schedulerContract.purchase(planId, quantity, { value: BigNumber.from(valueToTransfer) })
-  }
-
-  supportsApproveAndPurchase = (tokenAddress: string):boolean =>
-    this.options?.supportedER677Tokens !== undefined &&
-    this.options.supportedER677Tokens.map(x => x.toLowerCase()).includes(tokenAddress.toLowerCase())
-
-  async purchasePlan (planId: BigNumberish, quantity: BigNumberish): Promise<ContractTransaction> {
-    const plan = await this.getPlan(planId)
-    const purchaseCost = plan.pricePerExecution.mul(quantity)
-    if (plan.token === constants.AddressZero) {
-      return this._rbtcPurchase(planId, quantity, purchaseCost)
-    } else {
-      const signerAddress = await this.signer!.getAddress()
-      const token = this.erc20.attach(plan.token)
-      const balance = await token.balanceOf(signerAddress)
-
-      if (balance.lt(purchaseCost)) throw new Error('Not enough balance')
-      return (this.supportsApproveAndPurchase(plan.token))
-        ? this._erc677Purchase(planId, quantity, plan.token, purchaseCost)
-        : this._erc20Purchase(planId, quantity, plan.token, purchaseCost)
-    }
-  }
-
-  async estimateGas (
-    contractAddress: string,
-    encodedTransactionCall: utils.BytesLike
-  ): Promise<BigNumber | undefined> {
-    try {
-      const gas = await this.provider
-        .estimateGas({
-          to: contractAddress,
-          data: encodedTransactionCall
-        })
-
-      return gas
-    } catch {
-      // couldn't estimate the gas
-      // it might be an invalid transaction
-      return undefined
-    }
-  }
-
-  schedule = (execution: IExecutionRequest) => this.schedulerContract.schedule(
-    execution.plan,
-    execution.to,
-    execution.data,
-    execution.timestamp,
-    { value: execution.value }
-  )
-
-  async scheduleMany (execution: IExecutionRequest, cronExpression: string, quantity: BigNumberish): Promise<ContractTransaction> {
-    const remainingExecutions = await this.remainingExecutions(execution.plan)
-    if (remainingExecutions.lt(quantity)) throw new Error("You don't enough remaining executions.")
-
-    const options = {
-      currentDate: dayjs.unix(BigNumber.from(execution.timestamp).toNumber()).toDate(),
-      iterator: true
-    }
-    const interval = cronParser.parseExpression(cronExpression, options)
-    const requestedExecutions:string[] = []
-
-    let next = BigNumber.from(execution.timestamp).toNumber() // first execution
-
-    for (let i = 0; i < quantity; i++) {
-      const encoder = new utils.AbiCoder()
-
-      const encodedExecution = encoder.encode(
-        ['uint256', 'address', 'bytes', 'uint256', 'uint256'],
-        [execution.plan, execution.to, execution.data, BigNumber.from(next), execution.value]
-      )
-
-      requestedExecutions.push(encodedExecution)
-
-      const nextDate: any = interval.next()
-      next = dayjs(nextDate.value.toDate()).unix()
+    for (let index = BigNumber.from(0); index.lt(plansCount); index = index.add(1)) {
+      const plan = await this.getPlan(index)
+      plansList.push(plan)
     }
 
-    const totalValue = BigNumber.from(execution.value).mul(requestedExecutions.length)
-    return await this.schedulerContract.batchSchedule(requestedExecutions, { value: totalValue })
+    return plansList
   }
 
-  parseScheduleManyReceipt = (receipt: ContractReceipt) =>
-    receipt.events!.filter((ev:Event) => ev.args!.id !== undefined && ev.args!.timestamp !== undefined)
-      .map(ev => (({ id: ev.args!.id, timestamp: dayjs.unix(ev!.args!.timestamp).toDate() }) as ScheduledExecution))
+  public async getExecutionsCount (accountAddress: string): Promise<BigNumber> {
+    return this.schedulerContract.executionsByRequestorCount(accountAddress)
+  }
 
-  cancelExecution = (execution: string | IExecutionRequest) => this.schedulerContract.cancelScheduling(executionIdFromParam(execution))
+  public async getExecution (executionId: string): Promise<Execution> {
+    const execution = await this.schedulerContract.getExecutionById(executionId)
+    const executionTimestampDate = dayjs.unix(BigNumber.from(execution.timestamp).toNumber()).toDate()
 
-  requestExecutionRefund = (execution: string | IExecutionRequest) => this.schedulerContract.requestExecutionRefund(executionIdFromParam(execution))
+    const plan = await this.getPlan(execution.plan)
 
-  getExecutionState = (execution: string | IExecutionRequest) => this.schedulerContract.getState(executionIdFromParam(execution))
+    return new Execution(
+      this.config,
+      plan,
+      execution.to,
+      execution.data,
+      executionTimestampDate,
+      execution.value,
+      execution.requestor
+    )
+  }
 
-  getScheduledExecutionsCount = (accountAddress: string) => this.schedulerContract.executionsByRequestorCount(accountAddress)
-
-  getScheduledExecutions = async (accountAddress: string, fromIndex: BigNumberish, toIndex: BigNumberish) => {
+  public async getExecutions (accountAddress: string, fromIndex: BigNumberish, toIndex: BigNumberish): Promise<Execution[]> {
     const executions = await this.schedulerContract.getExecutionsByRequestor(accountAddress, fromIndex, toIndex)
-    return executions.map(x => {
-      const executionTimestampDate = dayjs.unix(BigNumber.from(x.timestamp).toNumber()).toDate()
+    const plansCache: Plan[] = []
+    return Promise.all(executions.map(async (execution) => {
+      const executionTimestampDate = dayjs.unix(BigNumber.from(execution.timestamp).toNumber()).toDate()
 
-      const execution: IExecutionResponse = {
-        data: x.data,
-        plan: x.plan,
-        requestor: x.requestor,
-        to: x.to,
-        value: x.value,
-        id: executionId(x.requestor, x.plan, x.to, x.data, executionTimestampDate, x.value),
-        timestamp: executionTimestampDate
+      let plan = plansCache.find(x => x.index.eq(execution.plan))
+
+      if (!plan) {
+        plan = await this.getPlan(execution.plan)
+        plansCache.push(plan)
       }
 
-      return execution
-    })
+      return new Execution(
+        this.config,
+        plan,
+        execution.to,
+        execution.data,
+        executionTimestampDate,
+        execution.value,
+        execution.requestor
+      )
+    }))
+  }
+
+  public async getMinimumTimeBeforeScheduling (): Promise<BigNumber> {
+    // this is the minimum quantity of seconds required to schedule an execution
+    return this.schedulerContract.minimumTimeBeforeExecution()
+  }
+
+  public async schedule (execution: Execution): Promise<ContractTransaction> {
+    return this.schedulerContract.schedule(
+      execution.plan.index,
+      execution.contractAddress,
+      execution.contractFunctionEncoded,
+      execution.executeAtBigNumber,
+      { value: execution.value }
+    )
+  }
+
+  public async scheduleMany (executions: Execution[]): Promise<ContractTransaction> {
+    const encodedExecutions = executions.map(x => x.encode())
+
+    const totalValue = executions.reduce((total, execution) => total.add(execution.value), BigNumber.from(0))
+
+    return this.schedulerContract.batchSchedule(encodedExecutions, { value: totalValue })
   }
 }

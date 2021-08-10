@@ -32,10 +32,6 @@ class Token extends Base {
   }
 
   public async approve (amount: BigNumberish): Promise<ContractTransaction> {
-    if (this.getType() !== TokenType.ERC20) {
-      throw new Error("This token doesn't requires approval")
-    }
-
     return this.tokenContract.approve(this.schedulerContract.address, amount)
   }
 

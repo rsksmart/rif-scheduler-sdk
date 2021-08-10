@@ -221,4 +221,64 @@ describe('RIFScheduler', function (this: {
       await this.rifScheduler.scheduleMany(executionsToSchedule)
     }).rejects.toThrow('VM Exception while processing transaction: revert No balance available')
   })
+
+  test('should be able to purchase and schedule without remaining executions', async () => {
+    const encodedMethodCall = this.encodedTxSamples.successful
+    const timestamp = dayjs(await timeLatest()).add(1, 'day').toDate()
+    const valueToTransfer = BigNumber.from(0)
+    const plan = await this.rifScheduler.getPlan(0)
+
+    const remainingExecutions = await plan.getRemainingExecutions()
+    expect(remainingExecutions.eq(0)).toBeTruthy()
+
+    const execution = new Execution(
+      this.rifScheduler.config,
+      plan,
+      this.contracts.tokenAddress,
+      encodedMethodCall,
+      timestamp,
+      valueToTransfer,
+      this.consumerAddress
+    )
+
+    const initialState = await execution.getState()
+
+    const approveTx = await plan.token.approve(plan.pricePerExecution)
+    await approveTx.wait()
+
+    const scheduleTx = await this.rifScheduler.purchaseAndSchedule(execution)
+    await scheduleTx.wait()
+
+    const resultState = await execution.getState()
+
+    expect(initialState).toBe(EExecutionState.NotScheduled)
+    expect(resultState).toBe(EExecutionState.Scheduled)
+  })
+
+  test('cannot purchase and schedule with value', async () => {
+    const encodedMethodCall = this.encodedTxSamples.successful
+    const timestamp = dayjs(await timeLatest()).add(1, 'day').toDate()
+    const valueToTransfer = BigNumber.from(1)
+    const plan = await this.rifScheduler.getPlan(2)
+
+    const remainingExecutions = await plan.getRemainingExecutions()
+    expect(remainingExecutions.eq(0)).toBeTruthy()
+
+    const execution = new Execution(
+      this.rifScheduler.config,
+      plan,
+      this.contracts.tokenAddress,
+      encodedMethodCall,
+      timestamp,
+      valueToTransfer,
+      this.consumerAddress
+    )
+
+    const approveTx = await plan.token.approve(plan.pricePerExecution)
+    await approveTx.wait()
+
+    expect(async () => {
+      await this.rifScheduler.purchaseAndSchedule(execution)
+    }).rejects.toThrow('Cannot purchase and schedule with value')
+  })
 })

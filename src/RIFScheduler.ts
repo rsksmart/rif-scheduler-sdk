@@ -90,6 +90,22 @@ export class RIFScheduler extends Base {
     )
   }
 
+  public async purchaseAndSchedule (execution: Execution): Promise<ContractTransaction> {
+    if (execution.value.gt(0)) {
+      throw new Error('Cannot purchase and schedule with value')
+    }
+
+    const purchaseQuantity = 1
+
+    const purchaseEncoded = this.schedulerContract.interface.encodeFunctionData('purchase', [execution.plan.index, purchaseQuantity])
+    const scheduleEncoded = this.schedulerContract.interface.encodeFunctionData('schedule', [execution.plan.index,
+      execution.contractAddress,
+      execution.contractFunctionEncoded,
+      execution.executeAtBigNumber])
+
+    return this.schedulerContract.multicall([purchaseEncoded, scheduleEncoded], true)
+  }
+
   public async scheduleMany (executions: Execution[]): Promise<ContractTransaction> {
     const encodedExecutions = executions.map(x => x.encode())
 

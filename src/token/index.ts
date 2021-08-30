@@ -1,16 +1,21 @@
-import { BigNumber, BigNumberish, constants, ContractTransaction } from 'ethers'
+import {
+  BigNumber,
+  BigNumberish,
+  constants,
+  ContractTransaction
+} from 'ethers'
 import { Base, Config } from '../Base'
 // eslint-disable-next-line camelcase
 import { ERC20, ERC20__factory } from './types'
 
 export enum TokenType {
-    ERC20,
-    ERC677,
-    RBTC
+  ERC20,
+  ERC677,
+  RBTC,
 }
 
 class Token extends Base {
-  private tokenContract: ERC20
+  private tokenContract: ERC20;
 
   constructor (config: Config, public address: string) {
     super(config)
@@ -45,7 +50,10 @@ class Token extends Base {
     }
 
     const signerAddress = await this.signer!.getAddress()
-    const allowance = await this.tokenContract.allowance(signerAddress, this.schedulerContract.address)
+    const allowance = await this.tokenContract.allowance(
+      signerAddress,
+      this.schedulerContract.address
+    )
 
     const hasEnoughAllowance = allowance.gte(amount)
 
@@ -53,18 +61,37 @@ class Token extends Base {
   }
 
   public async decimals (): Promise<number> {
+    if (this.getType() === TokenType.RBTC) {
+      return 18
+    }
+
     return this.tokenContract.decimals()
   }
 
   public async symbol (): Promise<string> {
+    if (this.getType() === TokenType.RBTC) {
+      return 'RBTC'
+    }
+
     return this.tokenContract.symbol()
   }
 
   public async balanceOf (address: string): Promise<BigNumber> {
+    if (this.getType() === TokenType.RBTC) {
+      return this.signer!.getBalance()
+    }
+
     return this.tokenContract.balanceOf(address)
   }
 
-  public async allowance (ownerAddress: string, expenderAddress: string): Promise<BigNumber> {
+  public async allowance (
+    ownerAddress: string,
+    expenderAddress: string
+  ): Promise<BigNumber> {
+    if (this.getType() !== TokenType.ERC20) {
+      throw new Error("This token doesn't allowance")
+    }
+
     return this.tokenContract.allowance(ownerAddress, expenderAddress)
   }
 }

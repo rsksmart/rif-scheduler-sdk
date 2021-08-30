@@ -53,18 +53,34 @@ class Token extends Base {
   }
 
   public async decimals (): Promise<number> {
+    if (this.getType() === TokenType.RBTC) {
+      return 8
+    }
+
     return this.tokenContract.decimals()
   }
 
   public async symbol (): Promise<string> {
+    if (this.getType() === TokenType.RBTC) {
+      return 'RBTC'
+    }
+
     return this.tokenContract.symbol()
   }
 
   public async balanceOf (address: string): Promise<BigNumber> {
+    if (this.getType() === TokenType.RBTC) {
+      return this.signer!.getBalance()
+    }
+
     return this.tokenContract.balanceOf(address)
   }
 
   public async allowance (ownerAddress: string, expenderAddress: string): Promise<BigNumber> {
+    if (this.getType() !== TokenType.ERC20) {
+      throw new Error("This token doesn't allowance")
+    }
+
     return this.tokenContract.allowance(ownerAddress, expenderAddress)
   }
 }

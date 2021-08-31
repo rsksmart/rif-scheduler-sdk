@@ -1,6 +1,6 @@
 {
   "name": "@rsksmart/rif-scheduler-sdk",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "RIF Scheduler SDK",
   "main": "dist/index.js",
   "files": [
